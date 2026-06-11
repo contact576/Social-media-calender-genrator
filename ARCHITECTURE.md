@@ -62,7 +62,8 @@ unsourced/unused were removed: `BASELINE_WINDOW` (now hard-coded "50–90" insid
 knob) and `OPERATOR_NAME` (no consumer). `PROOF_ASSETS` (field 17) is wired into S6/S7 below.
 
 `DERIVED_KEYS` (computed, never user-entered, must be known to the reconciler so they aren't flagged
-as orphans): `{{CURRENT_DATE}}`, `{{VAULT_PATH}}` (= `{{VAULT_FOLDER}}/<step-file>`), `{{CLIENT_SLUG}}`.
+as orphans): `{{CURRENT_DATE}}`. (The vault path is written literally as `{{VAULT_FOLDER}}/<step-file>`
+in each template, so no separate path/slug key is needed — keeps the canonical set free of dead keys.)
 
 **Conditional sections** (for optional fields): `[[IF KEY]] … [[ENDIF]]` blocks are stripped when the
 key is empty, so e.g. the competitor-handles instruction vanishes cleanly when none are given. The
