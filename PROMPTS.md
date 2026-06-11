@@ -73,8 +73,8 @@ no_go (echo), one-line "biggest opportunity" hypothesis.
 VAULT SAVE: save the FULL report and the HANDOFF SUMMARY to Google Drive at
 "{{VAULT_FOLDER}}/s1-baseline.md". After saving, echo the exact saved path + file link and confirm you
 did NOT create a duplicate vault folder.
-[[IF VAULT_FOLDER]]If the Google Drive connector is unavailable, output the full file contents in a
-single code block and tell me to paste-save it as s1-baseline.md myself.[[ENDIF]]
+If the Google Drive connector is unavailable, output the full file contents in a
+single code block and tell me to paste-save it as s1-baseline.md myself.
 ```
 
 ---
@@ -138,7 +138,7 @@ OUTPUT: the funnel line, the kill table, and the classified account list with re
 VAULT SAVE: save full report + HANDOFF SUMMARY (≤30 lines: funnel counts, the EXACT/ADJACENT/MACRO
 account lists, and the S3 deep-scrape target usernames) to "{{VAULT_FOLDER}}/s2-discovery.md". After
 saving, echo the exact path + link and confirm no duplicate folder was created.
-[[IF VAULT_FOLDER]]No Drive connector? Output the file in a code block for me to paste-save.[[ENDIF]]
+No Drive connector? Output the file in a code block for me to paste-save.
 ```
 
 ---
@@ -181,7 +181,7 @@ of what the scores reveal.
 VAULT SAVE: save full table + HANDOFF SUMMARY (≤30 lines: the selected 20–25 with scores, classes, and
 direct videoUrls) to "{{VAULT_FOLDER}}/s3-outliers.md". After saving, echo the exact path + link and
 confirm no duplicate folder was created.
-[[IF VAULT_FOLDER]]No Drive? Output the file in a code block to paste-save.[[ENDIF]]
+No Drive? Output the file in a code block to paste-save.
 ```
 
 ---
@@ -243,7 +243,7 @@ OUTPUT: the decoded cards, compact. VAULT SAVE: full cards + HANDOFF SUMMARY (�
 one-line hook + format + outlier score each; mark any UNAVAILABLE/low-confidence cards) to
 "{{VAULT_FOLDER}}/s4-decode.md". After saving, echo the exact path + link and confirm no duplicate
 folder was created.
-[[IF VAULT_FOLDER]]No Drive? Output the file in a code block to paste-save.[[ENDIF]]
+No Drive? Output the file in a code block to paste-save.
 ```
 
 ---
@@ -279,7 +279,7 @@ OUTPUT: the seven sections, terse. VAULT SAVE: full synthesis + HANDOFF SUMMARY 
 verbal + 5 visual + 5 overlay hooks, the 3 transplants, THE GAP in one sentence) to
 "{{VAULT_FOLDER}}/s5-patterns.md". After saving, echo the exact path + link and confirm no duplicate
 folder was created.
-[[IF VAULT_FOLDER]]No Drive? Output the file in a code block to paste-save.[[ENDIF]]
+No Drive? Output the file in a code block to paste-save.
 ```
 
 ---
@@ -324,7 +324,7 @@ and FLAG the deviation; never claim "40/40/20" if the math doesn't.
 VAULT SAVE: full calendar + HANDOFF SUMMARY (≤30 lines: the split counts + the slot list dates/formats)
 to "{{VAULT_FOLDER}}/s6-calendar.md". After saving, echo the exact path + link and confirm no duplicate
 folder was created.
-[[IF VAULT_FOLDER]]No Drive? Output the file in a code block to paste-save.[[ENDIF]]
+No Drive? Output the file in a code block to paste-save.
 ```
 
 ---
@@ -374,7 +374,7 @@ OUTPUT: the winning scripts with their gate verdicts. VAULT SAVE: full scripts +
 (≤30 lines: one line per script — its 3-hook gist + source card + share trigger) to
 "{{VAULT_FOLDER}}/s7-scripts.md". After saving, echo the exact path + link and confirm no duplicate
 folder was created.
-[[IF VAULT_FOLDER]]No Drive? Output the file in a code block to paste-save.[[ENDIF]]
+No Drive? Output the file in a code block to paste-save.
 ```
 
 ---
@@ -412,5 +412,5 @@ OUTPUT: Part A markdown, then Part B verdict table. VAULT SAVE: Part A to
 "{{VAULT_FOLDER}}/s8-report.md" and Part B to "{{VAULT_FOLDER}}/s8b-learning-loop.md". After saving,
 echo BOTH exact paths + links, confirm no duplicate folder, and remind me that Part B must actually be
 run each month for the learning loop to function.
-[[IF VAULT_FOLDER]]No Drive? Output both files in code blocks to paste-save.[[ENDIF]]
+No Drive? Output both files in code blocks to paste-save.
 ```
