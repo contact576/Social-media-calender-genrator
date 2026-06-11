@@ -237,7 +237,7 @@ THEN TAG each card (BLUEPRINT §2.3 + §2.4):
   HOOK TYPE · RETENTION DEVICE · PAYOFF (delivered? y/n) · SHARE TRIGGER · FORMAT. Give each card an ID
   (C1, C2, …) — S7 scripts must cite these.
 
-CAPS: VERBAL on all selected 20–25; VISUAL on the top 10–12 only.
+CAPS: VERBAL on all selected 20–25; VISUAL on the top 10–12 only (mandatory on at least the top 10).
 
 OUTPUT: the decoded cards, compact. VAULT SAVE: full cards + HANDOFF SUMMARY (≤30 lines: card IDs with
 one-line hook + format + outlier score each; mark any UNAVAILABLE/low-confidence cards) to
