@@ -761,19 +761,19 @@ function renderMarkdown(md){
   const lines=String(md==null?'':md).replace(/\r\n/g,'\n').split('\n');
   const n=lines.length, covered=new Array(n).fill(false);
   const blank=s=>/^\s*$/.test(s);
-  const startsBlock=s=>/^(#{1,6})\s|^\s*\||^\s*>|^\s*([-*+]|\d+\.)\s|^```|^\s*([-*_])\3\3+\s*$/.test(s);
+  const startsBlock=s=>/^(#{1,6})\s|^\s*\||^\s*>|^\s*([-*+]|\d+\.)\s|^\s*```+|^\s*([-*_])\3\3+\s*$/.test(s);
   let html='', blocks=0, i=0;
   while(i<n){
     const line=lines[i];
     if(blank(line)){ covered[i]=true; i++; continue; }
-    const fence=line.match(/^```\s*([\w-]+)?\s*$/);
+    const fence=line.match(/^\s*```+\s*([\w-]+)?.*$/);
     if(fence){ const lang=(fence[1]||'').toLowerCase(); covered[i]=true; i++; const buf=[];
-      while(i<n && !/^```\s*$/.test(lines[i])){ buf.push(lines[i]); covered[i]=true; i++; }
+      while(i<n && !/^\s*```+\s*$/.test(lines[i])){ buf.push(lines[i]); covered[i]=true; i++; }
       if(i<n){ covered[i]=true; i++; } blocks++;
       html+= lang==='chart' ? bfChart(buf) : '<pre class="rpt-code"><code>'+bfEscape(buf.join('\n'))+'</code></pre>';
       continue; }
     const h=line.match(/^(#{1,6})\s+(.*)$/);
-    if(h){ covered[i]=true; i++; blocks++; const lvl=h[1].length;
+    if(h && h[2].trim()!==''){ covered[i]=true; i++; blocks++; const lvl=h[1].length;
       html+='<h'+lvl+' class="rpt-h'+lvl+'">'+bfInline(bfEscape(h[2].trim()))+'</h'+lvl+'>'; continue; }
     if(/^\s*([-*_])\1\1+\s*$/.test(line)){ covered[i]=true; i++; blocks++; html+='<hr class="rpt-hr">'; continue; }
     if(/^\s*\|.*\|\s*$/.test(line)){ const tbl=[];

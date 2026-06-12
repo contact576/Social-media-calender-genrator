@@ -83,6 +83,10 @@ ok('beautifier: code fence preserved verbatim', /Comment BRUSH/.test(rep.html));
 const r2=api.renderMarkdown('# T\n\n```\nunclosed code fence\nstill text');
 ok('beautifier: unclosed fence drops nothing & no throw', r2.dropped.length===0, 'dropped '+r2.dropped.join(','));
 ok('beautifier: empty input safe', api.renderMarkdown('').blocks===0 && api.renderMarkdown('').dropped.length===0);
+const rJs=api.renderMarkdown('```js\nvar x=1;\n```\nafter the block');
+ok('beautifier: ```lang fence pairs correctly', /<pre class="rpt-code">/.test(rJs.html) && /after the block/.test(rJs.html) && rJs.dropped.length===0);
+const rEh=api.renderMarkdown('## \nreal text');
+ok('beautifier: empty heading is not an empty tag, no drop', !/<h2[^>]*><\/h2>/.test(rEh.html) && rEh.dropped.length===0);
 
 console.log('\n'+(fails?('❌ '+fails+' check(s) failed'):'✅ all checks passed'));
 process.exit(fails?1:0);
