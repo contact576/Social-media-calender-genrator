@@ -136,7 +136,7 @@
       These are instructions for a <strong>specially set-up Claude chat</strong> that has three tools connected:
       <strong>Apify</strong> (pulls the Instagram data), <strong>Higgsfield</strong> (analyses the videos), and
       <strong>Google&nbsp;Drive</strong> (saves each step). Pasting them into regular ChatGPT or plain Claude will <em>not</em> work.
-      If you don’t have that chat, ask your admin to set it up. <span class="muted">[Your team's link goes here.]</span>
+      If you don’t have that chat, ask your admin to set it up. <a id="chatLink" data-chat-link="" href="#" style="display:none">Open the connected chat →</a>
     </div>
     <p class="lead">Then run them <strong>in order, S1 → S8</strong>: copy one, paste it, let it finish and save to Drive, then the next. Don’t skip ahead — each step needs the previous step’s saved file. Keep <strong>S3 and S4 in one sitting</strong> (Instagram video links expire within hours).</p>
     <div id="promptHost"><p class="muted">No prompts yet — fill the intake form and press <em>Generate prompts</em>.</p></div>
@@ -965,6 +965,9 @@ if(typeof module!=='undefined'&&module.exports){module.exports={FIELD_KEYS,DERIV
   // ---- auto-name the vault folder from the client name (until the operator edits it) ----
   (function(){ let lastAuto=''; const cn=$('#f_CLIENT_NAME'), vf=$('#f_VAULT_FOLDER');
     if(cn&&vf){ cn.addEventListener('input',()=>{ if(vf.value===''||vf.value===lastAuto){ lastAuto=(cn.value.trim()?cn.value.trim()+' — ':'')+'SMM Virality Vault'; vf.value=lastAuto; save(); } }); } })();
+
+  // ---- connected-chat link (set data-chat-link on #chatLink to enable the button) ----
+  (function(){ const a=document.getElementById('chatLink'); if(a){ const u=(a.getAttribute('data-chat-link')||'').trim(); if(u){ a.href=u; a.target='_blank'; a.rel='noopener'; a.style.display='inline-block'; a.style.cssText='display:inline-block;margin-top:6px;font-weight:600'; } } })();
 
   // ---- init ----
   restore(); showRecon();
