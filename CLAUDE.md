@@ -38,10 +38,24 @@ Three guards exist specifically to prevent the silent-data-loss bug class — pr
 The step list is derived once as `STEPS = Object.keys(RAW).sort()` — do not reintroduce a hand-written
 `['S1'..'S8']` array anywhere.
 
+**Intake specifics that the templates depend on:** `CLIENT_HANDLE` is **optional** — S1 branches on it
+(`ESTABLISHED` account computes a baseline median; `NEW/THIN` account, i.e. no handle or <10 reels, skips
+the baseline since S3's outlier math uses each *discovered* account's own median). A single
+`ADDITIONAL_NOTES` catch-all field carries voice/proof/pillars (older per-topic fields were removed). S8's
+learning loop is guarded by `[[IF CLIENT_HANDLE]]`.
+
+## Beautifier (`renderMarkdown` in `<script id="engine">`, "3 · Beautifier" tab)
+
+Paste S8 markdown → branded printable HTML. The non-negotiable rule: **no silent drops** — every
+non-blank source line is assigned to a block, with a generic-fallback branch so unrecognized content
+still renders (visibly flagged), and a `dropped[]` coverage check. A ```` ```chart ```` fence (lines of
+`Label: number`) becomes an inline SVG bar chart. All output is HTML-escaped before inline formatting;
+link hrefs are scheme-whitelisted. Keep these guarantees if you touch the renderer.
+
 ## Verify after every change
 
 ```bash
-node selftest.mjs          # engine + reconciler + PROMPTS.md parity + validation (28 checks, no deps)
+node selftest.mjs          # engine + reconciler + PROMPTS.md parity + validation + beautifier (~40 checks, no deps)
 python3 inject_prompts.py  # re-embed templates into index.html after editing PROMPTS.md
 ```
 
@@ -70,6 +84,12 @@ the pipeline:
   (`framesToExtract` 4–6 to avoid a 413). Non-English/music reels route to Higgsfield, which translates.
 - `get-dataset-items`: fetch full items and `omit` bulky blocks; never `fields=` on nested arrays (it
   silently drops them).
+- **Whisper's free trial can expire** ("you must rent a paid Actor"); the chain falls back to Higgsfield
+  `video_analysis`, which transcribes **and** translates. Verified during the Phase 6 run.
+- **Higgsfield `video_analysis` / `media_import_url` cost 0 credits** (confirmed against an unchanged
+  balance + empty transaction log). Only Higgsfield *generation* (Seedance/Kling/Nano-Banana) spends
+  credits; the Decoder never generates. The `grizzlygriff` Gemini actor runs in `analysisMode:"frames"`
+  (images only) — it does NOT transcribe audio; use Higgsfield or Whisper for the spoken track.
 
 ## Phase-gate workflow (read before doing project work)
 
@@ -77,9 +97,10 @@ This is a **gated build** governed by `KICKOFF_PROMPT.md` (process) + `BLUEPRINT
 rule is strict: do the numbered phase, end it with a QC pass by **blind fresh-eyes subagents** (given
 the artifact + the relevant spec, NOT your reasoning), present a review package, then **STOP and wait
 for the owner's explicit approval** before the next phase. Never start two phases in one turn. Commit at
-each gate; push only after approval. Status so far: Phases 0–4 complete (brief, live validation,
-architecture, prompt chain, dashboard). **Phase 5 = the Beautifier** (paste S8 markdown → branded
-printable HTML, with a generic fallback renderer so unknown blocks never silently vanish) is next.
+each gate; push only after approval. **Status: Phases 0–7 complete** — brief, live validation,
+architecture, prompt chain, dashboard, Beautifier, a real PPC-Guru end-to-end run, README + Vercel
+deploy. The build is shipped; further work is maintenance/v2 (see README roadmap). Keep the gate
+discipline for any substantial new phase.
 
 Cost guardrail for any phase that scrapes: ask the owner before a run exceeds ~$3 total / $5 per run /
 1,500 items, and report actual spend.
@@ -93,8 +114,12 @@ Cost guardrail for any phase that scrapes: ask the owner before a run exceeds ~$
 - `ARCHITECTURE.md` — the dashboard design spec (intake fields, S1–S8 spec, vault map).
 - `PROMPTS.md` — **canonical** S1–S8 templates. `SAMPLE_PROMPTS_PPCGURU.md` — the same rendered for the pilot.
 - `index.html` — the app. `inject_prompts.py` / `selftest.mjs` — build + test helpers (not shipped to the operator).
+- `README.md` — operator quick-start + troubleshooting + cost notes + v2 roadmap. (The Drive "vault" with
+  the PPC-Guru `s1`–`s8b` decode/scripts/report lives in Google Drive, not the repo.)
 
-## Git
+## Git & deploy
 
-Develop on branch `claude/gallant-lamport-8u6hlo`; push with `git push -u origin <branch>` and open/keep
-a draft PR. Commit messages are scoped per phase (e.g. "Phase 4: …").
+`main` is **production**: the repo is connected to Vercel, which **auto-deploys `index.html` on every push
+to `main`**. Develop on a feature branch, open a PR, then **merge to `main` to ship** (that triggers the
+deploy — there is no separate deploy step). This sandbox's network policy blocks `vercel.app`, so the live
+URL can't be fetched from here; verify deploys from the Vercel dashboard / a real browser.
