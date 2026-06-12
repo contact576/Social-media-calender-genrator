@@ -26,40 +26,43 @@ ARCHITECTURE.md   # this file
 ```
 The Research Vault lives in **Google Drive**, not the repo: `SMM Virality Vault / <CLIENT> / s*.md`.
 
-## 2. Intake form (the ~25 fields → placeholder keys)
+## 2. Intake form (19 fields → placeholder keys)
 Placeholder convention: **`{{UPPER_SNAKE_CASE}}`** (double brace). One canonical JS array `FIELD_KEYS`
 is the single source of truth; templates may only reference keys in `FIELD_KEYS` ∪ `DERIVED_KEYS`.
 
 | # | Field (label) | Placeholder key | Req? | Validation rule |
 |---|---|---|---|---|
 | 1 | Client name | `{{CLIENT_NAME}}` | ✅ | non-empty |
-| 2 | Client IG handle | `{{CLIENT_HANDLE}}` | ✅ | strip leading `@`; `^[A-Za-z0-9._]{1,30}$` |
+| 2 | Client IG handle | `{{CLIENT_HANDLE}}` | ⬜ | empty (new client) or `^[A-Za-z0-9._]{1,30}$` after stripping `@` |
 | 3 | Client website | `{{CLIENT_WEBSITE}}` | ⬜ | empty or URL-ish |
 | 4 | Niche | `{{NICHE}}` | ✅ | non-empty |
 | 5 | Services (priority order) | `{{SERVICES}}` | ✅ | ≥1 line |
 | 6 | ICP (who the buyer is) | `{{ICP}}` | ✅ | non-empty |
-| 7 | Geo — primary | `{{GEO_PRIMARY}}` | ✅ | non-empty |
-| 8 | Geo — wider | `{{GEO_WIDER}}` | ⬜ | — |
-| 9 | Language — primary | `{{LANGUAGE_PRIMARY}}` | ✅ | default "English" |
-| 10 | Language — secondary/hooks | `{{LANGUAGE_SECONDARY}}` | ⬜ | — |
-| 11 | **Niche search keywords** | `{{NICHE_KEYWORDS}}` | ✅ | **≥3 lines** (keystone of discovery) |
-| 12 | Niche hashtags | `{{NICHE_HASHTAGS}}` | ⬜ | each line `#?[\w.]+` |
-| 13 | Adjacent-niche keywords | `{{ADJACENT_KEYWORDS}}` | ✅ | ≥1 line (transplant seeds) |
-| 14 | Known competitor handles | `{{COMPETITOR_HANDLES}}` | ⬜ | each line a valid handle (force-include seeds) |
-| 15 | Brand voice (3 adjectives) | `{{BRAND_VOICE}}` | ✅ | non-empty |
-| 16 | No-go topics (hard bans) | `{{NO_GO_TOPICS}}` | ✅ | non-empty |
-| 17 | Proof assets (owned results) | `{{PROOF_ASSETS}}` | ⬜ | — |
-| 18 | Content pillars | `{{CONTENT_PILLARS}}` | ✅ | ≥1 line |
-| 19 | Posting capacity | `{{POSTING_CAPACITY}}` | ✅ | non-empty (reels/wk + who films) |
-| 20 | Production modes | `{{PRODUCTION_MODES}}` | ✅ | non-empty (phone / AI-avatar / designer) — feeds S6's mandatory effort tag |
-| 21 | Primary CTA | `{{CTA_PRIMARY}}` | ✅ | non-empty |
-| 22 | Calendar start date | `{{CALENDAR_START_DATE}}` | ✅ | valid date |
-| 23 | Vault folder | `{{VAULT_FOLDER}}` | ✅ | default `<CLIENT_NAME> — SMM Virality Vault` |
+| 7 | Geo — main area | `{{GEO_PRIMARY}}` | ✅ | non-empty |
+| 8 | Language — primary | `{{LANGUAGE_PRIMARY}}` | ✅ | default "English" |
+| 9 | Language — secondary/hooks | `{{LANGUAGE_SECONDARY}}` | ⬜ | — |
+| 10 | **Niche search keywords** | `{{NICHE_KEYWORDS}}` | ✅ | **≥3 lines** (keystone of discovery) |
+| 11 | Niche hashtags | `{{NICHE_HASHTAGS}}` | ⬜ | each line `#?[\w.]+` |
+| 12 | Adjacent-niche keywords | `{{ADJACENT_KEYWORDS}}` | ✅ | ≥1 line (transplant seeds) |
+| 13 | Known competitor handles | `{{COMPETITOR_HANDLES}}` | ⬜ | each line a valid handle (force-include seeds) |
+| 14 | No-go topics (hard bans) | `{{NO_GO_TOPICS}}` | ✅ | non-empty |
+| 15 | Posting capacity | `{{POSTING_CAPACITY}}` | ✅ | non-empty (reels/wk + who films) |
+| 16 | Production modes | `{{PRODUCTION_MODES}}` | ✅ | non-empty (phone / AI-avatar / designer) — feeds S6's mandatory effort tag |
+| 17 | Primary CTA | `{{CTA_PRIMARY}}` | ✅ | non-empty |
+| 18 | Additional notes (catch-all) | `{{ADDITIONAL_NOTES}}` | ⬜ | — (brand voice, proof, pillars, constraints — consumed by S1/S6/S7) |
+| 19 | Vault folder | `{{VAULT_FOLDER}}` | ✅ | default `<CLIENT_NAME> — SMM Virality Vault` (auto-named from client name) |
 
-23 visible fields ("~25" target met). **Every field has a downstream consumer** — see the §4 step
-inputs; the reconciler (§3) flags any field that becomes a dead key. Two fields the first QC caught as
-unsourced/unused were removed: `BASELINE_WINDOW` (now hard-coded "50–90" inside S1, not an operator
-knob) and `OPERATOR_NAME` (no consumer). `PROOF_ASSETS` (field 17) is wired into S6/S7 below.
+**Every field has a downstream consumer** — see the §4 step inputs; the reconciler (§3) flags any field
+that becomes a dead key. Owner-directed simplification (post-Phase-4) removed `GEO_WIDER`, `BRAND_VOICE`,
+`PROOF_ASSETS`, `CONTENT_PILLARS`, and `CALENDAR_START_DATE`; their intent is now covered by the single
+**`ADDITIONAL_NOTES`** catch-all (voice/proof/pillars) and by `CURRENT_DATE` (the calendar starts the
+next Monday on/after it). Earlier-removed: `BASELINE_WINDOW` (hard-coded "50–90" in S1) and `OPERATOR_NAME`.
+
+**New/thin-account handling (owner-directed):** `CLIENT_HANDLE` is **optional** — new clients often have
+no account yet. S1 branches on it: *ESTABLISHED* (handle + ≥10 reels) computes the baseline median;
+*NEW/THIN* (no handle, or <10 reels) sets baseline = N/A and infers a RECOMMENDED voice. Discovery/decode/
+scripts (S2–S7) never use the client's own content, so they are unaffected. S8's learning loop is guarded
+by `[[IF CLIENT_HANDLE]]` and prints "not yet active" when there is no account.
 
 `DERIVED_KEYS` (computed, never user-entered, must be known to the reconciler so they aren't flagged
 as orphans): `{{CURRENT_DATE}}`. (The vault path is written literally as `{{VAULT_FOLDER}}/<step-file>`
@@ -116,11 +119,13 @@ and are exactly what the Phase-3 operational-trap auditor and the usability suba
 Every step: terse in-chat output + a **vault SAVE footer**; S3–S8 also begin with a **vault LOAD
 header**. Actor names/fields are the ones **proven in `VALIDATION_REPORT.md`**.
 
-- **S1 — Client Baseline.** In: `CLIENT_HANDLE, CLIENT_WEBSITE, NICHE, ICP, SERVICES, GEO_*, BRAND_VOICE,
-  NO_GO_TOPICS` (`CLIENT_WEBSITE` = brand/offer context + the destination CTAs ultimately drive to). MCP: `apify/instagram-reel-scraper` (`username=[CLIENT_HANDLE]`, `resultsLimit=50–90`
-  hard-coded in prompt, `skipPinnedPosts=true`). Out: **baseline median plays**, engagement rate, top-5/bottom-5 + why,
-  formats, cadence, follower quality, voice extracted from captions. Cap ≤90. Fallback: <10 reels →
-  "INSUFFICIENT DATA, baseline = plays/followers." SAVE `s1-baseline.md` + HANDOFF (≤30 lines).
+- **S1 — Client Baseline.** In: `CLIENT_HANDLE?, CLIENT_WEBSITE?, NICHE, ICP, SERVICES, GEO_PRIMARY,
+  LANGUAGE_PRIMARY, NO_GO_TOPICS, ADDITIONAL_NOTES?`. **Branches on MODE:** *ESTABLISHED* (handle present
+  + ≥10 reels with plays) → MCP `apify/instagram-reel-scraper` (`username=[CLIENT_HANDLE]`,
+  `resultsLimit=50–90` hard-coded, `skipPinnedPosts=true`) → **baseline median plays**, engagement, top-5/
+  bottom-5 + why, formats, cadence, follower quality, voice extracted from captions; *NEW/THIN* (no handle
+  or <10 reels) → baseline = "N/A — new/thin account", infer a RECOMMENDED voice from niche/services/notes.
+  The scrape is wrapped in `[[IF CLIENT_HANDLE]]`. SAVE `s1-baseline.md` + HANDOFF (≤30 lines, incl. MODE).
 - **S2 — Niche Discovery (keyword-first).** In: `NICHE_KEYWORDS, NICHE_HASHTAGS, ADJACENT_KEYWORDS,
   COMPETITOR_HANDLES?, GEO_*, LANGUAGE_*`. MCP: `data-slayer/instagram-search-reels` (one run per
   keyword, `maxPages` cap), optional hashtag scraper, `[[IF COMPETITOR_HANDLES]]` force-include via
@@ -147,18 +152,19 @@ header**. Actor names/fields are the ones **proven in `VALIDATION_REPORT.md`**.
   separated**), format distribution (saturated vs absent), length sweet spot, audio strategy,
   share-trigger frequency, **transplant map** (adjacent format × client niche), **THE GAP**. SAVE
   `s5-patterns.md`.
-- **S6 — Strategy + 30-Day Calendar.** LOAD `s1,s5`. In: `CONTENT_PILLARS, POSTING_CAPACITY,
-  CALENDAR_START_DATE, PRODUCTION_MODES, CTA_PRIMARY, PROOF_ASSETS` (PROOF_ASSETS seeds the **20%
-  CONVERT** slots — transformations/testimonials). Out: **40/40/20** calendar; per slot
+- **S6 — Strategy + 30-Day Calendar.** LOAD `s1,s5`. In: `POSTING_CAPACITY, PRODUCTION_MODES,
+  CTA_PRIMARY, ADDITIONAL_NOTES?` + `CURRENT_DATE` (calendar starts the next Monday on/after it). The
+  prompt **derives 3–5 content pillars** from services/ICP/S5 patterns; **CONVERT** slots use any proof
+  in `ADDITIONAL_NOTES`, else are flagged "needs a proof asset". Out: **40/40/20** calendar; per slot
   date/pillar/format/hook concept/topic/audio/CTA/production-effort tag. SAVE `s6-calendar.md`.
-- **S7 — Viral Scripts.** LOAD `s4,s5,s6`. In (intake): `PROOF_ASSETS` (for the account-swap rewrite —
-  inject the client's real proof/place/personality). Out per reel: **THREE hooks verbatim** (spoken /
-  first-frame visual / overlay ≤8 words), beat-by-beat body w/ b-roll, payoff, CTA, caption
-  (first-line hook + body + CTA), hashtags, audio, target length. **Quality gates:** swipe verdict per
-  channel; **overlay ≠ verbal gate** (BLUEPRINT §2.1 — the overlay text must be a *second* message, not
-  a caption of the spoken hook; reject if they duplicate); account-swap test (rewrite generic scripts
-  with `PROOF_ASSETS`); share-trigger named; **S4 card-ID traceability**; divergent ideation (2–3
-  candidates scored, winners output). SAVE `s7-scripts.md`.
+- **S7 — Viral Scripts.** LOAD `s4,s5,s6`. In (intake): `ADDITIONAL_NOTES?` (proof/voice) + the voice
+  from `s1-baseline`. Out per reel: **THREE hooks verbatim** (spoken / first-frame visual / overlay ≤8
+  words), beat-by-beat body w/ b-roll, payoff, CTA, caption (first-line hook + body + CTA), hashtags,
+  audio, target length. **Quality gates:** swipe verdict per channel; **overlay ≠ verbal gate**
+  (BLUEPRINT §2.1 — the overlay text must be a *second* message, not a caption of the spoken hook;
+  reject if they duplicate); account-swap test (inject proof from notes/s1, else flag "needs client
+  proof"); share-trigger named; **S4 card-ID traceability**; divergent ideation (2–3 candidates scored,
+  winners output). SAVE `s7-scripts.md`.
 - **S8 — Showcase Report + Learning Loop.** LOAD `s1–s7`. (a) client-facing report markdown (funnel
   counts, insights, strategy, calendar) → feeds the Beautifier. (b) **monthly re-run:** scrape client's
   own last-30-days, outlier-score vs S1 baseline, **keep/kill/double-down**, feed next month's S6.

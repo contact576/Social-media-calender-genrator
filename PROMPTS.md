@@ -23,52 +23,59 @@
 ## S1 — Client Brand & Baseline Decode
 
 ```
-You are a senior social-media research analyst. Decode ONE Instagram account and establish the
-statistical BASELINE that every later step's outlier math depends on. Be mechanical and honest:
-report counts, never invent numbers. If data is insufficient, write "INSUFFICIENT DATA" — do not guess.
+You are a senior social-media research analyst. Establish whatever BASELINE the client's own Instagram
+allows — many clients are brand-new or near-empty, and that is expected and fine. Be mechanical and
+honest: report counts, never invent numbers. A "NEW/THIN ACCOUNT" verdict is a correct, useful answer.
 
 CLIENT CONTEXT
-- Client: {{CLIENT_NAME}}  (@{{CLIENT_HANDLE}})
+- Client: {{CLIENT_NAME}}[[IF CLIENT_HANDLE]]  (@{{CLIENT_HANDLE}})[[ENDIF]]
 [[IF CLIENT_WEBSITE]]- Website / destination: {{CLIENT_WEBSITE}}[[ENDIF]]
 - Niche: {{NICHE}}
 - Services (priority order): {{SERVICES}}
 - Ideal customer (ICP): {{ICP}}
-- Geo: {{GEO_PRIMARY}}[[IF GEO_WIDER]] (wider: {{GEO_WIDER}})[[ENDIF]]
+- Geo: {{GEO_PRIMARY}}
 - Primary language: {{LANGUAGE_PRIMARY}}
-- Brand voice to learn: {{BRAND_VOICE}}
 - Hard no-go (never produce): {{NO_GO_TOPICS}}
+[[IF ADDITIONAL_NOTES]]- Operator notes (extra context — voice, proof, constraints): {{ADDITIONAL_NOTES}}[[ENDIF]]
 
-TASK
-1) Scrape the client's own reels. MCP — apify/instagram-reel-scraper:
+STEP 0 — DECIDE THE MODE.
+[[IF CLIENT_HANDLE]]Scrape the client's own reels. MCP — apify/instagram-reel-scraper:
    { "username": ["{{CLIENT_HANDLE}}"], "resultsLimit": 90, "skipPinnedPosts": true }
-   (We want 50–90 reels; if the profile returns fewer, use what's there and report the actual n.)
-   Fetch full dataset items with `omit` for heavy blocks; never `fields=` on nested arrays.
-   If the actor returns an "approve-permissions" error, send the link to the owner to approve once in
-   the Apify console, then re-run.
-2) Compute and REPORT, as a table:
+   Fetch full dataset items with `omit` for heavy blocks; never `fields=` on nested arrays. If the actor
+   returns an "approve-permissions" error, send the link to the owner to approve once, then re-run.
+   Count reels WITH a non-null `videoPlayCount` (call it n).[[ENDIF]]
+   - No handle provided, or n < 10  → MODE = NEW/THIN ACCOUNT.
+   - Otherwise                      → MODE = ESTABLISHED ACCOUNT.
+   State the chosen MODE on the first line of your output.
+
+IF MODE = NEW/THIN ACCOUNT:
+   - BASELINE_MEDIAN_PLAYS = "N/A — new/thin account (n=<count>)". Do NOT fabricate a baseline. S3's
+     outlier math uses each DISCOVERED account's own median, so the pipeline needs no client baseline —
+     discovery (S2) proceeds exactly the same.
+   - Brand voice: infer a RECOMMENDED voice from the niche, services, ICP and any operator notes (label
+     it RECOMMENDED, not observed). If a handful of posts exist, add observed traits and mark them so.
+   - Skip the play-count statistics; complete the HANDOFF SUMMARY with what you have.
+
+IF MODE = ESTABLISHED ACCOUNT, compute and REPORT as a table:
    - n (reels analysed) and date range covered.
-   - BASELINE = MEDIAN of `videoPlayCount` across these reels. (This number is sacred — S3 uses it.)
-     Report how many reels had missing/zero `videoPlayCount` and whether you excluded or zero-filled
-     them BEFORE computing the median. If n < 30, stamp the BASELINE "LOW-CONFIDENCE (n=X)" and repeat
-     that stamp in the HANDOFF SUMMARY so S3/S8 inherit the warning.
-   - Mean plays, and the median:mean ratio (skew check).
+   - BASELINE = MEDIAN of `videoPlayCount`. (Sacred — S3/S8 use it.) Report how many reels had
+     missing/zero `videoPlayCount` and whether you excluded or zero-filled them BEFORE the median. If
+     n < 30, stamp the BASELINE "LOW-CONFIDENCE (n=X)" and repeat that stamp in the HANDOFF SUMMARY.
+   - Mean plays + median:mean ratio (skew check).
    - Engagement rate per reel = (likesCount + commentsCount) / videoPlayCount; report the median ER.
    - Posting cadence: reels/week from `timestamp` spread.
-3) Top-5 and Bottom-5 reels by `videoPlayCount`. For each: plays, ER, a one-line WHY-HYPOTHESIS
-   (hook/format/topic) — clearly labelled HYPOTHESIS, not fact.
-4) Format mix actually used (talking-head / voiceover+b-roll / text-on-screen / skit / before-after /
-   tutorial-listicle / other) with rough %.
-5) Brand voice read: 3–5 observed traits from captions + 3 example caption first-lines. Note any drift
-   from the target voice "{{BRAND_VOICE}}".
-6) Follower-quality sniff test: do plays/likes/comments move together, or is there an engagement
-   anomaly (views high, comments dead = possible botting)? State the verdict.
+   - Top-5 and Bottom-5 reels by `videoPlayCount`: plays, ER, a one-line WHY-HYPOTHESIS (labelled
+     HYPOTHESIS, not fact).
+   - Format mix used (talking-head / voiceover+b-roll / text-on-screen / skit / before-after /
+     tutorial-listicle / other) with rough %.
+   - Brand voice read: 3–5 observed traits from captions + 3 example caption first-lines.
+   - Follower-quality sniff test: do plays/likes/comments move together, or is there an engagement
+     anomaly (views high, comments dead = possible botting)? State the verdict.
 
-FALLBACK: if fewer than 10 reels WITH a non-null `videoPlayCount` exist, set BASELINE = "INSUFFICIENT
-DATA; use plays ÷ followers in S3" and say so explicitly. (Count analysable reels, not raw items.)
-
-OUTPUT: the tables above, terse. Then a HANDOFF SUMMARY (≤30 lines) containing exactly:
-BASELINE_MEDIAN_PLAYS, n, median_ER, cadence_per_week, top_format, voice_traits (3–5),
-no_go (echo), one-line "biggest opportunity" hypothesis.
+OUTPUT: the MODE line, then the relevant block above, terse. Then a HANDOFF SUMMARY (≤30 lines)
+containing exactly: MODE, BASELINE_MEDIAN_PLAYS (or "N/A"), n, median_ER (or "N/A"), cadence_per_week
+(or "N/A"), top_format (or "N/A"), voice (observed or RECOMMENDED, 3–5 traits), no_go (echo), one-line
+"biggest opportunity" hypothesis.
 
 VAULT SAVE: save the FULL report and the HANDOFF SUMMARY to Google Drive at
 "{{VAULT_FOLDER}}/s1-baseline.md". After saving, echo the exact saved path + file link and confirm you
@@ -295,20 +302,22 @@ VAULT LOAD (FIRST): load s1-baseline and s5-patterns from "{{VAULT_FOLDER}}/". L
 — found y/n + last-modified; if either is missing or empty, STOP — never reconstruct from memory.
 
 STRATEGY INPUTS
-- Content pillars: {{CONTENT_PILLARS}}
 - Posting capacity: {{POSTING_CAPACITY}}
 - Production modes available: {{PRODUCTION_MODES}}
 - Primary CTA: {{CTA_PRIMARY}}
-[[IF PROOF_ASSETS]]- Owned proof (for CONVERT slots): {{PROOF_ASSETS}}[[ENDIF]]
-- Calendar starts: {{CALENDAR_START_DATE}}
+[[IF ADDITIONAL_NOTES]]- Operator notes (proof, preferred pillars, constraints): {{ADDITIONAL_NOTES}}[[ENDIF]]
+- Calendar starts the next Monday on/after {{CURRENT_DATE}} (state the actual start date you use).
+
+DERIVE PILLARS FIRST: from the services, the ICP and S5's patterns + THE GAP (plus any operator notes),
+define 3–5 content pillars and list them up front. Map every calendar slot to one of these pillars.
 
 RULES
 - MIX every week toward the 40/40/20 split:
   40% REACH (decoded viral formats, broad relatable angle) ·
   40% NURTURE (niche value: how-tos, mistakes, costs explained — saves & follows from the ICP) ·
-  20% CONVERT (proof, transformations, testimonials, offers).[[IF PROOF_ASSETS]] Build CONVERT slots
-  from the owned proof above.[[ENDIF]] If no proof was supplied, mark each CONVERT slot "needs a proof
-  asset from the client" rather than inventing a result.
+  20% CONVERT (proof, transformations, testimonials, offers). Build CONVERT slots from any proof in the
+  operator notes; if none was supplied, mark each CONVERT slot "needs a proof asset from the client"
+  rather than inventing a result.
 - Honor the cadence in {{POSTING_CAPACITY}} — CAP at 3 reels/week; a week with >3 slots is REJECTED
   (the calendar must be filmable).
 - Pull hooks/formats from the S5 hook bank + transplant map; tag which card/transplant each derives
@@ -339,7 +348,7 @@ winner.
 
 VAULT LOAD (FIRST): load s4-decode, s5-patterns, s6-calendar from "{{VAULT_FOLDER}}/". LOAD RECEIPT:
 echo each — found y/n + last-modified; if any is missing or empty, STOP — never reconstruct from memory.
-[[IF PROOF_ASSETS]]Owned proof for the account-swap rewrite: {{PROOF_ASSETS}}.[[ENDIF]] Hard no-go: {{NO_GO_TOPICS}}.
+[[IF ADDITIONAL_NOTES]]Operator notes (proof, voice, constraints): {{ADDITIONAL_NOTES}}.[[ENDIF]] Use the client's voice from s1-baseline (observed or RECOMMENDED). Hard no-go: {{NO_GO_TOPICS}}.
 
 FOR EACH reel in the S6 calendar (or the first N you're asked for), write a SCRIPT with:
 - THREE HOOKS, written separately and explicitly (a script with only "the hook" as one line is
@@ -362,8 +371,8 @@ evidence asked for):
 - OVERLAY ≠ VERBAL: quote the SPOKEN line and the OVERLAY line side by side so the distinction is
   auditable; reject & rewrite if they say the same thing.
 - ACCOUNT-SWAP TEST: could a competitor post this unchanged? To PASS, name the specific owned proof
-  point used[[IF PROOF_ASSETS]] (from: {{PROOF_ASSETS}})[[ENDIF]]. "Added personality" with no concrete
-  proof is a FAIL; if no proof was supplied, flag the script "needs client proof" — do not invent one.
+  point used (from the operator notes or s1-baseline). "Added personality" with no concrete proof is a
+  FAIL; if no proof is on file, flag the script "needs client proof" — do not invent one.
 - SHARE TRIGGER: name the one §2.3 trigger and why a human forwards it.
 - TRACEABILITY: cite the S4 card ID / S5 transplant each script derives from. If a cited card was
   marked UNAVAILABLE/low-confidence in S4, the script INHERITS that flag and is labelled SPECULATIVE —
@@ -399,14 +408,19 @@ PART A — SHOWCASE REPORT (markdown, paste into the Beautifier):
   was flagged LOW-CONFIDENCE / UNAVAILABLE / PARTIAL upstream must NOT appear as a clean stat here.
 
 PART B — LEARNING LOOP (monthly re-run):
-- First check the S1 baseline's age + n. If it is older than ~60 days OR was stamped LOW-CONFIDENCE
-  (n<30), RECOMPUTE the baseline from a fresh client scrape before issuing any verdict.
+The learning loop compares the client's OWN posts against their S1 baseline each month. It only runs
+once the client has an account with posts — if there is no client handle yet, write "Learning loop not
+yet active — client has no account/posts" and skip the rest of Part B.
+[[IF CLIENT_HANDLE]]- First check the S1 baseline's age + n. If older than ~60 days OR stamped
+  LOW-CONFIDENCE (n<30), RECOMPUTE the baseline from a fresh client scrape before any verdict.
 - MCP — apify/instagram-reel-scraper on the client's OWN last-30-days:
   { "username": ["{{CLIENT_HANDLE}}"], "resultsLimit": 30, "skipPinnedPosts": true }
   If the actor returns an "approve-permissions" error, send the link to the owner to approve once, re-run.
-- Outlier-score the client's own posts vs the S1 BASELINE_MEDIAN_PLAYS.
-- Verdicts: KEEP / KILL / DOUBLE-DOWN — double down on our ≥3x posts, kill our <0.5x formats.
-- Feed the verdicts into next month's S6.
+- Outlier-score the client's own posts vs the S1 BASELINE_MEDIAN_PLAYS. If the baseline is "N/A —
+  new/thin account", treat this as MONTH 1: just record each post + its plays to SEED next month's
+  baseline, and skip keep/kill verdicts (nothing to compare against yet).
+- Verdicts (once a baseline exists): KEEP / KILL / DOUBLE-DOWN — double down on ≥3x posts, kill <0.5x
+  formats. Feed the verdicts into next month's S6.[[ENDIF]]
 
 OUTPUT: Part A markdown, then Part B verdict table. VAULT SAVE: Part A to
 "{{VAULT_FOLDER}}/s8-report.md" and Part B to "{{VAULT_FOLDER}}/s8b-learning-loop.md". After saving,

@@ -46,10 +46,18 @@ const s2=api.generatePrompt('S2', vals, RAW);
 ok('S2 strips empty COMPETITOR_HANDLES leg', !/Force-include these competitor handles/.test(s2));
 ok('S2 keeps mandatory hashtag leg', /Leg 2 — HASHTAGS \(always run/.test(s2));
 
-// optional present (PROOF_ASSETS) kept in S6/S7
+// optional ADDITIONAL_NOTES kept where present
 const s6=api.generatePrompt('S6', vals, RAW), s7=api.generatePrompt('S7', vals, RAW);
-ok('S6 keeps PROOF_ASSETS block when present', /Owned proof \(for CONVERT slots\): real client results/.test(s6));
-ok('S7 keeps PROOF in account-swap when present', /from: real client results/.test(s7));
+ok('S6 includes operator notes when present', /Operator notes \(proof, preferred pillars/.test(s6));
+ok('S7 includes operator notes when present', /Operator notes \(proof, voice, constraints\)/.test(s7));
+ok('S1 keeps client scrape when handle present', /apify\/instagram-reel-scraper/.test(api.generatePrompt('S1', vals, RAW)));
+// NEW/THIN ACCOUNT: empty handle strips the client scrape + learning-loop scrape, stays placeholder-clean
+const valsNH=api.buildValues(Object.assign({},api.TEST_CLIENT,{CLIENT_HANDLE:''}));
+const s1nh=api.generatePrompt('S1', valsNH, RAW);
+ok('S1 strips client scrape when no handle', !/apify\/instagram-reel-scraper/.test(s1nh) && api.preflight(s1nh).length===0, api.preflight(s1nh).join(' '));
+const s8nh=api.generatePrompt('S8', valsNH, RAW);
+ok('S8 learning-loop guards no-handle', /Learning loop not\s+yet active/.test(s8nh) && !/"resultsLimit": 30/.test(s8nh) && api.preflight(s8nh).length===0);
+ok('no-handle client still passes validation', Object.keys(api.validate(Object.assign({},api.TEST_CLIENT,{CLIENT_HANDLE:''}))).length===0);
 
 // validation fires on blank
 const blank=api.validate({});

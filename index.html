@@ -144,52 +144,59 @@
 </div>
 
 <!-- ===== RAW PROMPT TEMPLATES (injected verbatim from PROMPTS.md; do not hand-edit) ===== -->
-<script type="text/plain" class="raw-prompt" data-step="S1">You are a senior social-media research analyst. Decode ONE Instagram account and establish the
-statistical BASELINE that every later step's outlier math depends on. Be mechanical and honest:
-report counts, never invent numbers. If data is insufficient, write "INSUFFICIENT DATA" — do not guess.
+<script type="text/plain" class="raw-prompt" data-step="S1">You are a senior social-media research analyst. Establish whatever BASELINE the client's own Instagram
+allows — many clients are brand-new or near-empty, and that is expected and fine. Be mechanical and
+honest: report counts, never invent numbers. A "NEW/THIN ACCOUNT" verdict is a correct, useful answer.
 
 CLIENT CONTEXT
-- Client: {{CLIENT_NAME}}  (@{{CLIENT_HANDLE}})
+- Client: {{CLIENT_NAME}}[[IF CLIENT_HANDLE]]  (@{{CLIENT_HANDLE}})[[ENDIF]]
 [[IF CLIENT_WEBSITE]]- Website / destination: {{CLIENT_WEBSITE}}[[ENDIF]]
 - Niche: {{NICHE}}
 - Services (priority order): {{SERVICES}}
 - Ideal customer (ICP): {{ICP}}
-- Geo: {{GEO_PRIMARY}}[[IF GEO_WIDER]] (wider: {{GEO_WIDER}})[[ENDIF]]
+- Geo: {{GEO_PRIMARY}}
 - Primary language: {{LANGUAGE_PRIMARY}}
-- Brand voice to learn: {{BRAND_VOICE}}
 - Hard no-go (never produce): {{NO_GO_TOPICS}}
+[[IF ADDITIONAL_NOTES]]- Operator notes (extra context — voice, proof, constraints): {{ADDITIONAL_NOTES}}[[ENDIF]]
 
-TASK
-1) Scrape the client's own reels. MCP — apify/instagram-reel-scraper:
+STEP 0 — DECIDE THE MODE.
+[[IF CLIENT_HANDLE]]Scrape the client's own reels. MCP — apify/instagram-reel-scraper:
    { "username": ["{{CLIENT_HANDLE}}"], "resultsLimit": 90, "skipPinnedPosts": true }
-   (We want 50–90 reels; if the profile returns fewer, use what's there and report the actual n.)
-   Fetch full dataset items with `omit` for heavy blocks; never `fields=` on nested arrays.
-   If the actor returns an "approve-permissions" error, send the link to the owner to approve once in
-   the Apify console, then re-run.
-2) Compute and REPORT, as a table:
+   Fetch full dataset items with `omit` for heavy blocks; never `fields=` on nested arrays. If the actor
+   returns an "approve-permissions" error, send the link to the owner to approve once, then re-run.
+   Count reels WITH a non-null `videoPlayCount` (call it n).[[ENDIF]]
+   - No handle provided, or n < 10  → MODE = NEW/THIN ACCOUNT.
+   - Otherwise                      → MODE = ESTABLISHED ACCOUNT.
+   State the chosen MODE on the first line of your output.
+
+IF MODE = NEW/THIN ACCOUNT:
+   - BASELINE_MEDIAN_PLAYS = "N/A — new/thin account (n=<count>)". Do NOT fabricate a baseline. S3's
+     outlier math uses each DISCOVERED account's own median, so the pipeline needs no client baseline —
+     discovery (S2) proceeds exactly the same.
+   - Brand voice: infer a RECOMMENDED voice from the niche, services, ICP and any operator notes (label
+     it RECOMMENDED, not observed). If a handful of posts exist, add observed traits and mark them so.
+   - Skip the play-count statistics; complete the HANDOFF SUMMARY with what you have.
+
+IF MODE = ESTABLISHED ACCOUNT, compute and REPORT as a table:
    - n (reels analysed) and date range covered.
-   - BASELINE = MEDIAN of `videoPlayCount` across these reels. (This number is sacred — S3 uses it.)
-     Report how many reels had missing/zero `videoPlayCount` and whether you excluded or zero-filled
-     them BEFORE computing the median. If n < 30, stamp the BASELINE "LOW-CONFIDENCE (n=X)" and repeat
-     that stamp in the HANDOFF SUMMARY so S3/S8 inherit the warning.
-   - Mean plays, and the median:mean ratio (skew check).
+   - BASELINE = MEDIAN of `videoPlayCount`. (Sacred — S3/S8 use it.) Report how many reels had
+     missing/zero `videoPlayCount` and whether you excluded or zero-filled them BEFORE the median. If
+     n < 30, stamp the BASELINE "LOW-CONFIDENCE (n=X)" and repeat that stamp in the HANDOFF SUMMARY.
+   - Mean plays + median:mean ratio (skew check).
    - Engagement rate per reel = (likesCount + commentsCount) / videoPlayCount; report the median ER.
    - Posting cadence: reels/week from `timestamp` spread.
-3) Top-5 and Bottom-5 reels by `videoPlayCount`. For each: plays, ER, a one-line WHY-HYPOTHESIS
-   (hook/format/topic) — clearly labelled HYPOTHESIS, not fact.
-4) Format mix actually used (talking-head / voiceover+b-roll / text-on-screen / skit / before-after /
-   tutorial-listicle / other) with rough %.
-5) Brand voice read: 3–5 observed traits from captions + 3 example caption first-lines. Note any drift
-   from the target voice "{{BRAND_VOICE}}".
-6) Follower-quality sniff test: do plays/likes/comments move together, or is there an engagement
-   anomaly (views high, comments dead = possible botting)? State the verdict.
+   - Top-5 and Bottom-5 reels by `videoPlayCount`: plays, ER, a one-line WHY-HYPOTHESIS (labelled
+     HYPOTHESIS, not fact).
+   - Format mix used (talking-head / voiceover+b-roll / text-on-screen / skit / before-after /
+     tutorial-listicle / other) with rough %.
+   - Brand voice read: 3–5 observed traits from captions + 3 example caption first-lines.
+   - Follower-quality sniff test: do plays/likes/comments move together, or is there an engagement
+     anomaly (views high, comments dead = possible botting)? State the verdict.
 
-FALLBACK: if fewer than 10 reels WITH a non-null `videoPlayCount` exist, set BASELINE = "INSUFFICIENT
-DATA; use plays ÷ followers in S3" and say so explicitly. (Count analysable reels, not raw items.)
-
-OUTPUT: the tables above, terse. Then a HANDOFF SUMMARY (≤30 lines) containing exactly:
-BASELINE_MEDIAN_PLAYS, n, median_ER, cadence_per_week, top_format, voice_traits (3–5),
-no_go (echo), one-line "biggest opportunity" hypothesis.
+OUTPUT: the MODE line, then the relevant block above, terse. Then a HANDOFF SUMMARY (≤30 lines)
+containing exactly: MODE, BASELINE_MEDIAN_PLAYS (or "N/A"), n, median_ER (or "N/A"), cadence_per_week
+(or "N/A"), top_format (or "N/A"), voice (observed or RECOMMENDED, 3–5 traits), no_go (echo), one-line
+"biggest opportunity" hypothesis.
 
 VAULT SAVE: save the FULL report and the HANDOFF SUMMARY to Google Drive at
 "{{VAULT_FOLDER}}/s1-baseline.md". After saving, echo the exact saved path + file link and confirm you
@@ -381,20 +388,22 @@ VAULT LOAD (FIRST): load s1-baseline and s5-patterns from "{{VAULT_FOLDER}}/". L
 — found y/n + last-modified; if either is missing or empty, STOP — never reconstruct from memory.
 
 STRATEGY INPUTS
-- Content pillars: {{CONTENT_PILLARS}}
 - Posting capacity: {{POSTING_CAPACITY}}
 - Production modes available: {{PRODUCTION_MODES}}
 - Primary CTA: {{CTA_PRIMARY}}
-[[IF PROOF_ASSETS]]- Owned proof (for CONVERT slots): {{PROOF_ASSETS}}[[ENDIF]]
-- Calendar starts: {{CALENDAR_START_DATE}}
+[[IF ADDITIONAL_NOTES]]- Operator notes (proof, preferred pillars, constraints): {{ADDITIONAL_NOTES}}[[ENDIF]]
+- Calendar starts the next Monday on/after {{CURRENT_DATE}} (state the actual start date you use).
+
+DERIVE PILLARS FIRST: from the services, the ICP and S5's patterns + THE GAP (plus any operator notes),
+define 3–5 content pillars and list them up front. Map every calendar slot to one of these pillars.
 
 RULES
 - MIX every week toward the 40/40/20 split:
   40% REACH (decoded viral formats, broad relatable angle) ·
   40% NURTURE (niche value: how-tos, mistakes, costs explained — saves & follows from the ICP) ·
-  20% CONVERT (proof, transformations, testimonials, offers).[[IF PROOF_ASSETS]] Build CONVERT slots
-  from the owned proof above.[[ENDIF]] If no proof was supplied, mark each CONVERT slot "needs a proof
-  asset from the client" rather than inventing a result.
+  20% CONVERT (proof, transformations, testimonials, offers). Build CONVERT slots from any proof in the
+  operator notes; if none was supplied, mark each CONVERT slot "needs a proof asset from the client"
+  rather than inventing a result.
 - Honor the cadence in {{POSTING_CAPACITY}} — CAP at 3 reels/week; a week with >3 slots is REJECTED
   (the calendar must be filmable).
 - Pull hooks/formats from the S5 hook bank + transplant map; tag which card/transplant each derives
@@ -418,7 +427,7 @@ winner.
 
 VAULT LOAD (FIRST): load s4-decode, s5-patterns, s6-calendar from "{{VAULT_FOLDER}}/". LOAD RECEIPT:
 echo each — found y/n + last-modified; if any is missing or empty, STOP — never reconstruct from memory.
-[[IF PROOF_ASSETS]]Owned proof for the account-swap rewrite: {{PROOF_ASSETS}}.[[ENDIF]] Hard no-go: {{NO_GO_TOPICS}}.
+[[IF ADDITIONAL_NOTES]]Operator notes (proof, voice, constraints): {{ADDITIONAL_NOTES}}.[[ENDIF]] Use the client's voice from s1-baseline (observed or RECOMMENDED). Hard no-go: {{NO_GO_TOPICS}}.
 
 FOR EACH reel in the S6 calendar (or the first N you're asked for), write a SCRIPT with:
 - THREE HOOKS, written separately and explicitly (a script with only "the hook" as one line is
@@ -441,8 +450,8 @@ evidence asked for):
 - OVERLAY ≠ VERBAL: quote the SPOKEN line and the OVERLAY line side by side so the distinction is
   auditable; reject & rewrite if they say the same thing.
 - ACCOUNT-SWAP TEST: could a competitor post this unchanged? To PASS, name the specific owned proof
-  point used[[IF PROOF_ASSETS]] (from: {{PROOF_ASSETS}})[[ENDIF]]. "Added personality" with no concrete
-  proof is a FAIL; if no proof was supplied, flag the script "needs client proof" — do not invent one.
+  point used (from the operator notes or s1-baseline). "Added personality" with no concrete proof is a
+  FAIL; if no proof is on file, flag the script "needs client proof" — do not invent one.
 - SHARE TRIGGER: name the one §2.3 trigger and why a human forwards it.
 - TRACEABILITY: cite the S4 card ID / S5 transplant each script derives from. If a cited card was
   marked UNAVAILABLE/low-confidence in S4, the script INHERITS that flag and is labelled SPECULATIVE —
@@ -471,14 +480,19 @@ PART A — SHOWCASE REPORT (markdown, paste into the Beautifier):
   was flagged LOW-CONFIDENCE / UNAVAILABLE / PARTIAL upstream must NOT appear as a clean stat here.
 
 PART B — LEARNING LOOP (monthly re-run):
-- First check the S1 baseline's age + n. If it is older than ~60 days OR was stamped LOW-CONFIDENCE
-  (n<30), RECOMPUTE the baseline from a fresh client scrape before issuing any verdict.
+The learning loop compares the client's OWN posts against their S1 baseline each month. It only runs
+once the client has an account with posts — if there is no client handle yet, write "Learning loop not
+yet active — client has no account/posts" and skip the rest of Part B.
+[[IF CLIENT_HANDLE]]- First check the S1 baseline's age + n. If older than ~60 days OR stamped
+  LOW-CONFIDENCE (n<30), RECOMPUTE the baseline from a fresh client scrape before any verdict.
 - MCP — apify/instagram-reel-scraper on the client's OWN last-30-days:
   { "username": ["{{CLIENT_HANDLE}}"], "resultsLimit": 30, "skipPinnedPosts": true }
   If the actor returns an "approve-permissions" error, send the link to the owner to approve once, re-run.
-- Outlier-score the client's own posts vs the S1 BASELINE_MEDIAN_PLAYS.
-- Verdicts: KEEP / KILL / DOUBLE-DOWN — double down on our ≥3x posts, kill our <0.5x formats.
-- Feed the verdicts into next month's S6.
+- Outlier-score the client's own posts vs the S1 BASELINE_MEDIAN_PLAYS. If the baseline is "N/A —
+  new/thin account", treat this as MONTH 1: just record each post + its plays to SEED next month's
+  baseline, and skip keep/kill verdicts (nothing to compare against yet).
+- Verdicts (once a baseline exists): KEEP / KILL / DOUBLE-DOWN — double down on ≥3x posts, kill <0.5x
+  formats. Feed the verdicts into next month's S6.[[ENDIF]]
 
 OUTPUT: Part A markdown, then Part B verdict table. VAULT SAVE: Part A to
 "{{VAULT_FOLDER}}/s8-report.md" and Part B to "{{VAULT_FOLDER}}/s8b-learning-loop.md". After saving,
@@ -490,27 +504,23 @@ No Drive? Output both files in code blocks to paste-save.</script>
 <script id="appdata">
 const FIELD_KEYS=[
  {key:'CLIENT_NAME',label:'Client name',group:'Client',type:'text',required:true,help:'The business this calendar is for.'},
- {key:'CLIENT_HANDLE',label:'Client Instagram handle',group:'Client',type:'text',required:true,help:'Without the @ — letters, numbers, dots, underscores.'},
+ {key:'CLIENT_HANDLE',label:'Client Instagram handle',group:'Client',type:'text',required:false,help:'Without the @. Leave blank if the account doesn’t exist yet (new clients) — the tool adapts.'},
  {key:'CLIENT_WEBSITE',label:'Client website',group:'Client',type:'text',required:false,help:'Optional. Where the CTAs ultimately drive.'},
  {key:'NICHE',label:'Niche',group:'Niche & offer',type:'text',required:true,help:'One line: what they do and who they serve — e.g. "family dental clinic for busy parents".'},
  {key:'SERVICES',label:'Services (most important first)',group:'Niche & offer',type:'textarea',multiline:'flow',required:true,help:'What they sell, most important first.'},
  {key:'ICP',label:'Ideal customer',group:'Niche & offer',type:'textarea',multiline:'flow',required:true,help:'Who exactly buys this? Be specific — their job, location, and the problem that keeps them up at night.'},
  {key:'GEO_PRIMARY',label:'Main area served',group:'Niche & offer',type:'text',required:true,help:'Main city or region — e.g. "Toronto" or "London, UK".'},
- {key:'GEO_WIDER',label:'Wider area',group:'Niche & offer',type:'text',required:false,help:'Optional. Extra areas they’d also take clients from.'},
  {key:'LANGUAGE_PRIMARY',label:'Primary language',group:'Niche & offer',type:'text',required:true,default:'English'},
  {key:'LANGUAGE_SECONDARY',label:'Secondary language / hook language',group:'Niche & offer',type:'text',required:false,help:'Optional.'},
  {key:'NICHE_KEYWORDS',label:'Niche search keywords',group:'Discovery',type:'textarea',multiline:'list',required:true,minLines:3,help:'Phrases people type into Instagram search to find content like this. One per line, at least 3 — e.g. "google ads tips", "small business marketing".'},
  {key:'NICHE_HASHTAGS',label:'Niche hashtags',group:'Discovery',type:'textarea',multiline:'list',required:false,help:'Optional — leave blank and the tool will pick them. If you add some, use medium-size tags. One per line.'},
  {key:'ADJACENT_KEYWORDS',label:'Related topics to borrow video ideas from',group:'Discovery',type:'textarea',multiline:'list',required:true,help:'Different fields whose video styles you could copy — e.g. for a dentist: "skincare routines", "gym transformations". One per line.'},
  {key:'COMPETITOR_HANDLES',label:'Known competitor handles',group:'Discovery',type:'textarea',multiline:'list',required:false,help:'Optional. Specific competitors to always include. One @handle per line.'},
- {key:'BRAND_VOICE',label:'Brand voice (3 adjectives)',group:'Voice & guardrails',type:'text',required:true,help:'e.g. "blunt, confident, proof-driven".'},
  {key:'NO_GO_TOPICS',label:'Things the content must never say',group:'Voice & guardrails',type:'textarea',multiline:'list',required:true,help:'Claims or topics to ban. One per line — e.g. "never promise guaranteed results".'},
- {key:'PROOF_ASSETS',label:'Owned proof / results',group:'Voice & guardrails',type:'textarea',multiline:'flow',required:false,help:'Optional but recommended. Real client results — used for proof/testimonial reels and to make scripts un-copyable.'},
- {key:'CONTENT_PILLARS',label:'Content pillars (main themes)',group:'Content strategy',type:'textarea',multiline:'list',required:true,help:'The main themes they post about. One per line.'},
  {key:'POSTING_CAPACITY',label:'Posting capacity',group:'Content strategy',type:'text',required:true,help:'How many reels per week, and who films them.'},
  {key:'PRODUCTION_MODES',label:'How videos get made',group:'Content strategy',type:'text',required:true,help:'e.g. phone (founder on camera), AI-avatar, designer/editor.'},
  {key:'CTA_PRIMARY',label:'Main call-to-action (CTA)',group:'Content strategy',type:'text',required:true,help:'What you want viewers to do — e.g. "comment a keyword to get a DM", "book a call".'},
- {key:'CALENDAR_START_DATE',label:'Calendar start date',group:'Content strategy',type:'date',required:true},
+ {key:'ADDITIONAL_NOTES',label:'Anything else worth knowing',group:'Anything else',type:'textarea',multiline:'flow',required:false,help:'Optional catch-all: brand voice, proof/results to feature, preferred content themes, constraints — anything not covered above. The prompts use this wherever relevant.'},
  {key:'VAULT_FOLDER',label:'Google Drive folder for saved files',group:'Ops',type:'text',required:true,help:'The AI saves each step’s results here. Auto-named after the client as you type — you don’t need to create the folder yourself.'}
 ];
 const DERIVED_KEYS=['CURRENT_DATE'];
@@ -519,19 +529,17 @@ const TEST_CLIENT={
  NICHE:'performance-marketing / lead-gen agency for local service businesses',
  SERVICES:'Google & Meta Ads management (frustrated-buyer angle) → AI Visibility/AEO → Website & Funnel dev → AI Clone/Avatar video → Social Media Management',
  ICP:'local service-business owners (renovation, clinics, restaurants, realtors), including South-Asian diaspora owners who are WhatsApp-first',
- GEO_PRIMARY:'GTA', GEO_WIDER:'Canada + USA', LANGUAGE_PRIMARY:'English', LANGUAGE_SECONDARY:'Hindi/Gujarati hooks',
+ GEO_PRIMARY:'GTA', LANGUAGE_PRIMARY:'English', LANGUAGE_SECONDARY:'Hindi/Gujarati hooks',
  NICHE_KEYWORDS:'google ads strategy\nmeta ads for small business\nlead generation agency\nfacebook ads results\ngoogle ads for contractors',
  NICHE_HASHTAGS:'#googleads\n#leadgeneration\n#ppcmarketing\n#metaads',
  ADJACENT_KEYWORDS:'agency owner day in the life\ngrow a marketing agency\nAI marketing tools\nhome renovation marketing',
  COMPETITOR_HANDLES:'',
- BRAND_VOICE:'blunt, confident, proof-driven',
  NO_GO_TOPICS:'no "we guarantee results"\nno "SEO is dead / nobody uses Google"',
- PROOF_ASSETS:'real client results across home services, realtors, clinics',
- CONTENT_PILLARS:'Education\nSocial Proof/Case Studies\nOrigin/Founder Story\nContrarian/Industry-callout',
  POSTING_CAPACITY:'2–3 reels/week; founder-shot phone for trust pieces, AI avatar (Higgsfield) for the rest; editing in-house (Vanshika + video editor)',
  PRODUCTION_MODES:'phone (founder on camera); AI-avatar (Higgsfield); fully-AI / storytelling',
  CTA_PRIMARY:'Comment the keyword to get the plan in DMs / book a call (link in bio)',
- CALENDAR_START_DATE:'2026-06-15', VAULT_FOLDER:'PPC Guru — SMM Virality Vault'
+ ADDITIONAL_NOTES:'Voice: blunt, confident, proof-driven. Proof to feature: real client results across home services, realtors, clinics. Suggested pillars: Education, Social Proof/Case Studies, Origin/Founder Story, Contrarian/Industry-callout.',
+ VAULT_FOLDER:'PPC Guru — SMM Virality Vault'
 };
 const STEP_TITLES={S1:'Client Baseline',S2:'Niche Discovery',S3:'Outlier Harvest',S4:'Deep Decode',S5:'Pattern Synthesis',S6:'30-Day Calendar',S7:'Viral Scripts',S8:'Showcase + Learning Loop'};
 </script>
