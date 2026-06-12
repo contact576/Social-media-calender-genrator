@@ -17,7 +17,7 @@ ok('extracted 8 templates', Object.keys(RAW).length===8, Object.keys(RAW).join('
 ok('extracted appdata + engine', !!appdata && !!engine);
 
 // --- eval the shipped engine ---
-const api = new Function(appdata+'\n'+engine+'\n;return {reconcile,buildValues,generatePrompt,preflight,validate,FIELD_KEYS,DERIVED_KEYS,TEST_CLIENT};')();
+const api = new Function(appdata+'\n'+engine+'\n;return {reconcile,buildValues,generatePrompt,preflight,validate,renderMarkdown,FIELD_KEYS,DERIVED_KEYS,TEST_CLIENT};')();
 
 // --- parity vs PROMPTS.md ---
 for(let n=1;n<=8;n++){const s='S'+n;
@@ -69,6 +69,20 @@ ok('TEST_CLIENT passes validation', Object.keys(api.validate(api.TEST_CLIENT)).l
 ok('bad handle rejected', !!api.validate(Object.assign({},api.TEST_CLIENT,{CLIENT_HANDLE:'bad handle!'})).CLIENT_HANDLE);
 // <3 keywords rejected
 ok('<3 keywords rejected', !!api.validate(Object.assign({},api.TEST_CLIENT,{NICHE_KEYWORDS:'one\ntwo'})).NICHE_KEYWORDS);
+
+// ---- Beautifier: no silent drop ----
+const sample=(html.match(/<script type="text\/plain" id="sample-report">([\s\S]*?)<\/script>/)||[])[1]||'';
+const rep=api.renderMarkdown(sample);
+ok('beautifier: sample has blocks', rep.blocks>0, rep.blocks+' blocks');
+ok('beautifier: nothing dropped from sample', rep.dropped.length===0, 'dropped: '+rep.dropped.join(','));
+ok('beautifier: unknown ::: block still rendered', /block type the renderer has never seen/.test(rep.html));
+ok('beautifier: raw angle brackets escaped, not executed', /&lt;callout&gt;/.test(rep.html) && !/<callout>/.test(rep.html));
+ok('beautifier: chart fence became an svg', /<svg class="rpt-chart"/.test(rep.html));
+ok('beautifier: table rendered', /<table class="rpt-table"/.test(rep.html));
+ok('beautifier: code fence preserved verbatim', /Comment BRUSH/.test(rep.html));
+const r2=api.renderMarkdown('# T\n\n```\nunclosed code fence\nstill text');
+ok('beautifier: unclosed fence drops nothing & no throw', r2.dropped.length===0, 'dropped '+r2.dropped.join(','));
+ok('beautifier: empty input safe', api.renderMarkdown('').blocks===0 && api.renderMarkdown('').dropped.length===0);
 
 console.log('\n'+(fails?('❌ '+fails+' check(s) failed'):'✅ all checks passed'));
 process.exit(fails?1:0);

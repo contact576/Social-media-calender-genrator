@@ -65,6 +65,39 @@
   .muted{color:var(--muted)}
   ol.steps{margin:0 0 4px;padding-left:20px} ol.steps li{margin:4px 0}
   footer.foot{margin-top:30px;border-top:1px solid var(--line);padding-top:12px;color:var(--muted);font-size:12px}
+  /* ---- Beautifier ---- */
+  .bf-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+  #bfInput{width:100%;min-height:150px;font-family:var(--mono);font-size:12.5px;border:1px solid var(--line);border-radius:8px;padding:12px;background:#fff;color:var(--ink)}
+  #reportArea{margin-top:14px}
+  .report{background:#fff;border:1px solid var(--line);border-radius:10px;padding:46px 54px}
+  @media(max-width:680px){.report{padding:26px 20px}}
+  .report .rpt-h1{font-family:var(--serif);font-weight:400;font-size:40px;line-height:1.1;margin:0 0 8px;border-bottom:3px solid var(--accent);padding-bottom:14px}
+  .report .rpt-h2{font-family:var(--serif);font-weight:400;font-size:27px;margin:34px 0 10px}
+  .report .rpt-h3{font-family:var(--sans);font-weight:700;font-size:15px;letter-spacing:.03em;text-transform:uppercase;color:var(--accent);margin:22px 0 8px}
+  .report .rpt-h4,.report .rpt-h5,.report .rpt-h6{font-family:var(--sans);font-weight:700;font-size:14px;margin:16px 0 6px}
+  .report .rpt-p{margin:0 0 12px;font-size:15px;line-height:1.62}
+  .report .rpt-list{margin:0 0 14px;padding-left:22px} .report .rpt-list li{margin:4px 0}
+  .report .rpt-quote{margin:0 0 14px;padding:10px 16px;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 6px 6px 0;font-size:15px}
+  .report .rpt-hr{border:none;border-top:1px solid var(--line);margin:24px 0}
+  .report .rpt-code{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow:auto;font-family:var(--mono);font-size:12.5px;margin:0 0 14px}
+  .report .rpt-tablewrap{overflow:auto;margin:0 0 16px}
+  .report .rpt-table{border-collapse:collapse;width:100%;font-size:13px}
+  .report .rpt-table th{background:var(--ink);color:var(--paper);text-align:left;padding:8px 10px;font-weight:600}
+  .report .rpt-table td{border:1px solid var(--line);padding:7px 10px;vertical-align:top}
+  .report .rpt-table tbody tr:nth-child(even){background:#fbf7f0}
+  .report .rpt-chartwrap{margin:6px 0 18px}
+  .report .rpt-chart{width:100%;height:auto;max-width:720px}
+  .report .rpt-chart-bar{fill:var(--accent)}
+  .report .rpt-chart-lab{fill:var(--ink);font-family:var(--sans);font-size:13px}
+  .report .rpt-chart-val{fill:var(--muted);font-family:var(--mono);font-size:12px}
+  .report .rpt-raw{background:#fff7f5;border-left:3px solid var(--accent);padding-left:10px}
+  .report code{background:#f1e9dc}
+  @media print{
+    body *{visibility:hidden!important}
+    #reportArea,#reportArea *{visibility:visible!important}
+    #reportArea{position:absolute;left:0;top:0;width:100%}
+    .report{border:none;border-radius:0;padding:0}
+  }
 </style>
 </head>
 <body>
@@ -79,6 +112,7 @@
   <nav class="tabs">
     <button data-tab="intake" class="active">1 · Intake form</button>
     <button data-tab="prompts">2 · Prompts (S1–S8)</button>
+    <button data-tab="beautify">3 · Beautifier</button>
     <button data-tab="diag">System check</button>
     <button data-tab="help">Help</button>
   </nav>
@@ -106,6 +140,20 @@
     </div>
     <p class="lead">Then run them <strong>in order, S1 → S8</strong>: copy one, paste it, let it finish and save to Drive, then the next. Don’t skip ahead — each step needs the previous step’s saved file. Keep <strong>S3 and S4 in one sitting</strong> (Instagram video links expire within hours).</p>
     <div id="promptHost"><p class="muted">No prompts yet — fill the intake form and press <em>Generate prompts</em>.</p></div>
+  </section>
+
+  <!-- ============ BEAUTIFIER ============ -->
+  <section class="tabpane" id="tab-beautify">
+    <p class="lead">Paste the <strong>S8 report</strong> (or any step's markdown) and turn it into a clean, branded report you can print or save as PDF. <strong>Nothing is silently dropped</strong> — any block the renderer doesn't recognise is still shown.</p>
+    <div class="bf-controls">
+      <button class="primary" id="btnRender">Render report →</button>
+      <button class="ghost" id="btnPrint">Print / Save as PDF</button>
+      <button class="ghost" id="btnSampleReport">Load sample report</button>
+      <span id="bfMsg" class="muted"></span>
+    </div>
+    <textarea id="bfInput" placeholder="Paste the S8 markdown report here…"></textarea>
+    <div id="bfWarn" class="banner bad hide"></div>
+    <div id="reportArea"></div>
   </section>
 
   <!-- ============ DIAGNOSTICS ============ -->
@@ -500,6 +548,71 @@ echo BOTH exact paths + links, confirm no duplicate folder, and remind me that P
 run each month for the learning loop to function.
 No Drive? Output both files in code blocks to paste-save.</script>
 
+<!-- ===== Beautifier sample report (used by the System check + "Load sample report") ===== -->
+<script type="text/plain" id="sample-report">
+# SMM Virality Report — Acme Dental
+
+*Prepared 2026-06-12 · family dental clinic for busy parents · GTA*
+
+## Research depth
+
+- Candidate reels found: **148**
+- Killed by mechanical rules: **96**
+- Decoded (3-layer): **22**
+- Priority outliers (≥20×): **4**
+
+```chart
+Candidates found: 148
+Survivors: 52
+Decoded: 22
+Priority outliers: 4
+```
+
+## Niche insights
+
+The niche is **saturated** with talking-head "5 tips" reels but almost nobody runs *before/after*
+transformations set to trending audio. Overlay text is underused — a clear opening.
+
+> THE GAP: no one in family-dentistry is pairing a 0.5s before/after visual hook with an overlay
+> question ("Why does your kid hate the dentist?"). Evidence: cards C3, C7, C11.
+
+## Format distribution
+
+| Format | Share | Verdict |
+|---|---|---|
+| Talking-head tips | 58% | saturated — out-execute |
+| Before/after | 6% | **absent — opportunity** |
+| Skit / POV | 21% | competitive |
+| Voiceover + b-roll | 15% | open |
+
+## 30-Day calendar (excerpt)
+
+| Date | Type | Pillar | Format | Hook concept |
+|---|---|---|---|---|
+| Mon Jun 16 | REACH | Education | before/after | "Watch this tooth go from… " |
+| Wed Jun 18 | NURTURE | Trust | talking-head | "3 myths about kids' braces" |
+| Fri Jun 20 | CONVERT | Proof | testimonial | needs a proof asset from the client |
+
+## Flagship script — "The 7am brushing battle"
+
+### Three hooks
+1. SPOKEN: "If your kid screams at the toothbrush, watch this."
+2. VISUAL: child mid-tantrum, brush in hand, cut to calm 2 seconds later.
+3. OVERLAY: "Why your kid fights brushing"
+
+Caption to copy:
+
+```
+POV: brushing used to be a war 😅 Here's the 10-second trick our hygienists swear by.
+Comment BRUSH and we'll DM you the routine. 🦷 #kidsdentist #torontomom
+```
+
+## Future / unknown block
+
+::: callout this is a block type the renderer has never seen — it must still appear, not vanish :::
+<callout>raw angle brackets should be shown literally, not executed</callout>
+</script>
+
 <!-- ===== APP DATA: field definitions + derived keys + test fixture ===== -->
 <script id="appdata">
 const FIELD_KEYS=[
@@ -609,8 +722,83 @@ function validate(raw){
   });
   return errs;
 }
+// ---------- Beautifier: markdown → branded HTML (NO SILENT DROP) ----------
+function bfEscape(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function bfInline(s){ // s must already be HTML-escaped
+  s=s.replace(/`([^`]+)`/g,'<code>$1</code>');
+  s=s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+  s=s.replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g,'$1<em>$2</em>');
+  s=s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g,function(m,t,u){ var href=/^(https?:|mailto:)/i.test(u)? u.replace(/"/g,'%22') : '#'; return '<a href="'+href+'" target="_blank" rel="noopener">'+t+'</a>'; });
+  return s;
+}
+function bfTable(rows){
+  const cells=r=>r.replace(/^\s*\|/,'').replace(/\|\s*$/,'').split('|').map(c=>c.trim());
+  let header=null; const body=[];
+  rows.forEach((r,idx)=>{ const c=cells(r);
+    if(idx===0){ header=c; }
+    else if(idx===1 && c.every(x=>/^:?-{1,}:?$/.test(x.replace(/\s/g,''))||x==='')){ /* separator */ }
+    else body.push(c);
+  });
+  let h='<div class="rpt-tablewrap"><table class="rpt-table">';
+  if(header) h+='<thead><tr>'+header.map(x=>'<th>'+bfInline(bfEscape(x))+'</th>').join('')+'</tr></thead>';
+  h+='<tbody>'+body.map(row=>'<tr>'+row.map(x=>'<td>'+bfInline(bfEscape(x))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+  return h;
+}
+function bfChart(buf){ // each line "Label: number" → horizontal SVG bar chart
+  const data=buf.map(l=>l.match(/^\s*(.+?):\s*([\d.,]+)\s*$/)).filter(Boolean)
+    .map(m=>({label:m[1].trim(), val:parseFloat(m[2].replace(/,/g,''))})).filter(d=>!isNaN(d.val));
+  if(!data.length) return '<pre class="rpt-code"><code>'+bfEscape(buf.join('\n'))+'</code></pre>'; // fallback: never drop
+  const max=Math.max.apply(null,data.map(d=>d.val))||1, bw=460, rh=24, gap=10, h=data.length*(rh+gap)+8;
+  let svg='<svg class="rpt-chart" viewBox="0 0 700 '+h+'" preserveAspectRatio="xMinYMin meet" role="img">';
+  data.forEach((d,idx)=>{ const y=idx*(rh+gap)+6, w=Math.max(2,Math.round(d.val/max*bw));
+    svg+='<text x="0" y="'+(y+rh*0.72)+'" class="rpt-chart-lab">'+bfEscape(d.label)+'</text>';
+    svg+='<rect x="170" y="'+y+'" width="'+w+'" height="'+rh+'" rx="3" class="rpt-chart-bar"></rect>';
+    svg+='<text x="'+(176+w)+'" y="'+(y+rh*0.72)+'" class="rpt-chart-val">'+d.val.toLocaleString()+'</text>';
+  });
+  return '<div class="rpt-chartwrap">'+svg+'</svg></div>';
+}
+function renderMarkdown(md){
+  const lines=String(md==null?'':md).replace(/\r\n/g,'\n').split('\n');
+  const n=lines.length, covered=new Array(n).fill(false);
+  const blank=s=>/^\s*$/.test(s);
+  const startsBlock=s=>/^(#{1,6})\s|^\s*\||^\s*>|^\s*([-*+]|\d+\.)\s|^```|^\s*([-*_])\3\3+\s*$/.test(s);
+  let html='', blocks=0, i=0;
+  while(i<n){
+    const line=lines[i];
+    if(blank(line)){ covered[i]=true; i++; continue; }
+    const fence=line.match(/^```\s*([\w-]+)?\s*$/);
+    if(fence){ const lang=(fence[1]||'').toLowerCase(); covered[i]=true; i++; const buf=[];
+      while(i<n && !/^```\s*$/.test(lines[i])){ buf.push(lines[i]); covered[i]=true; i++; }
+      if(i<n){ covered[i]=true; i++; } blocks++;
+      html+= lang==='chart' ? bfChart(buf) : '<pre class="rpt-code"><code>'+bfEscape(buf.join('\n'))+'</code></pre>';
+      continue; }
+    const h=line.match(/^(#{1,6})\s+(.*)$/);
+    if(h){ covered[i]=true; i++; blocks++; const lvl=h[1].length;
+      html+='<h'+lvl+' class="rpt-h'+lvl+'">'+bfInline(bfEscape(h[2].trim()))+'</h'+lvl+'>'; continue; }
+    if(/^\s*([-*_])\1\1+\s*$/.test(line)){ covered[i]=true; i++; blocks++; html+='<hr class="rpt-hr">'; continue; }
+    if(/^\s*\|.*\|\s*$/.test(line)){ const tbl=[];
+      while(i<n && /^\s*\|.*\|\s*$/.test(lines[i])){ tbl.push(lines[i]); covered[i]=true; i++; }
+      blocks++; html+=bfTable(tbl); continue; }
+    if(/^\s*>/.test(line)){ const buf=[];
+      while(i<n && /^\s*>/.test(lines[i])){ buf.push(lines[i].replace(/^\s*>\s?/,'')); covered[i]=true; i++; }
+      blocks++; html+='<blockquote class="rpt-quote">'+bfInline(bfEscape(buf.join(' ')))+'</blockquote>'; continue; }
+    if(/^\s*([-*+]|\d+\.)\s+/.test(line)){ const ordered=/^\s*\d+\.\s+/.test(line), items=[];
+      while(i<n && /^\s*([-*+]|\d+\.)\s+/.test(lines[i])){ items.push(lines[i].replace(/^\s*([-*+]|\d+\.)\s+/,'')); covered[i]=true; i++; }
+      blocks++; const tag=ordered?'ol':'ul';
+      html+='<'+tag+' class="rpt-list">'+items.map(it=>'<li>'+bfInline(bfEscape(it))+'</li>').join('')+'</'+tag+'>'; continue; }
+    // paragraph: gather consecutive non-blank lines that don't start a new block
+    const para=[];
+    while(i<n && !blank(lines[i]) && !startsBlock(lines[i])){ para.push(lines[i]); covered[i]=true; i++; }
+    if(para.length){ blocks++; html+='<p class="rpt-p">'+bfInline(bfEscape(para.join(' ')))+'</p>'; }
+    else { // safety net — consume one line generically so nothing can ever vanish
+      blocks++; html+='<p class="rpt-p rpt-raw">'+bfInline(bfEscape(lines[i]))+'</p>'; covered[i]=true; i++; }
+  }
+  const dropped=[]; for(let k=0;k<n;k++){ if(!covered[k] && !blank(lines[k])) dropped.push(k+1); }
+  return {html, blocks, dropped, totalLines:n};
+}
+
 // expose for node self-test
-if(typeof module!=='undefined'&&module.exports){module.exports={FIELD_KEYS,DERIVED_KEYS,TEST_CLIENT,buildValues,applyConditionals,replacePlaceholders,generatePrompt,preflight,reconcile,validate};}
+if(typeof module!=='undefined'&&module.exports){module.exports={FIELD_KEYS,DERIVED_KEYS,TEST_CLIENT,buildValues,applyConditionals,replacePlaceholders,generatePrompt,preflight,reconcile,validate,renderMarkdown};}
 </script>
 
 <!-- ===== UI: DOM wiring (browser only) ===== -->
@@ -738,6 +926,10 @@ if(typeof module!=='undefined'&&module.exports){module.exports={FIELD_KEYS,DERIV
     });
     checks.push(['Test client generates all '+STEPS.length+' prompts', emptyOk, emptyOk?'all non-empty':'a prompt came back empty']);
     checks.push(['No leftover placeholders in any prompt', genOk, genOk?'zero injectable {{ }} / [[ ]] tokens':leftover.join(' | ')]);
+    const rep=renderMarkdown((document.getElementById('sample-report')||{}).textContent||'');
+    checks.push(['Beautifier renders sample with nothing dropped', rep.dropped.length===0 && rep.blocks>0, rep.dropped.length?('dropped lines: '+rep.dropped.join(',')):(rep.blocks+' blocks, 0 dropped')]);
+    const fb=(((document.getElementById('sample-report')||{}).textContent||'').match(/^```/gm)||[]).length;
+    checks.push(['Beautifier sample code fences balanced', fb%2===0, fb+' fence markers']);
     const blankErrs=validate({});
     const expectBlank=FIELD_KEYS.filter(f=>f.required && !f.default && f.key!=='VAULT_FOLDER').length;
     const valOk=expectBlank>0 && Object.keys(blankErrs).length===expectBlank;
@@ -753,6 +945,22 @@ if(typeof module!=='undefined'&&module.exports){module.exports={FIELD_KEYS,DERIV
   $('#btnDiag').addEventListener('click',runDiagnostics);
   $('#btnDemo').addEventListener('click',()=>{ const has=FIELD_KEYS.some(f=>(($('#f_'+f.key)||{}).value||'').trim()); if(has && !confirm('This replaces what you’ve typed with the example. Continue?')) return; writeForm(TEST_CLIENT); save(); $('#formMsg').textContent='Example loaded — scroll through to see what good answers look like.'; });
   $('#btnClear').addEventListener('click',()=>{ if(confirm('Clear all fields?')){ FIELD_KEYS.forEach(f=>{const el=$('#f_'+f.key); if(el) el.value=f.default||'';}); save(); $('#formMsg').textContent='Cleared.'; } });
+
+  // ---- beautifier ----
+  const SAMPLE_REPORT=(document.getElementById('sample-report')||{}).textContent||'';
+  function renderReport(){
+    const md=$('#bfInput').value||'';
+    const res=renderMarkdown(md);
+    $('#reportArea').innerHTML = md.trim()? '<div class="report">'+res.html+'</div>' : '<p class="muted">Paste a report above, then press Render.</p>';
+    const warn=$('#bfWarn'); const issues=[];
+    if(res.dropped.length) issues.push(res.dropped.length+' source line(s) were shown raw rather than dropped (lines '+res.dropped.join(', ')+')');
+    const fences=(md.match(/^```/gm)||[]).length; if(fences%2!==0) issues.push('Unclosed code fence — '+fences+' ``` markers found; check the pasted text.');
+    if(issues.length){ warn.className='banner bad'; warn.innerHTML='<strong>Heads up:</strong> '+issues.join(' · '); } else { warn.className='banner hide'; }
+    $('#bfMsg').textContent=res.blocks+' blocks rendered'+(res.dropped.length?' · see warning':' · nothing dropped');
+  }
+  $('#btnRender').addEventListener('click',renderReport);
+  $('#btnSampleReport').addEventListener('click',()=>{ $('#bfInput').value=SAMPLE_REPORT.replace(/^\n/,''); renderReport(); });
+  $('#btnPrint').addEventListener('click',()=>{ if(!$('#reportArea').querySelector('.report')) renderReport(); if($('#reportArea').querySelector('.report')) window.print(); });
 
   // ---- auto-name the vault folder from the client name (until the operator edits it) ----
   (function(){ let lastAuto=''; const cn=$('#f_CLIENT_NAME'), vf=$('#f_VAULT_FOLDER');
