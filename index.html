@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SMM Virality Decoder — Prompt Dashboard</title>
+<style>
+  :root{
+    --serif:'Instrument Serif', Georgia, 'Times New Roman', serif;
+    --sans:'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono:'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    --paper:#faf6ef; --panel:#fffdf9; --ink:#1b1a17; --muted:#6f6b62;
+    --accent:#C2410C; --accent-soft:#f4e3d8; --line:#e7ddcd; --ok:#2f6f3e; --bad:#b3261e;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+  a{color:var(--accent)}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 20px 80px}
+  header.top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:8px}
+  header.top h1{font-family:var(--serif);font-weight:400;font-size:34px;margin:0;letter-spacing:.2px}
+  header.top .sub{color:var(--muted);font-size:13px}
+  .accent{color:var(--accent)}
+  nav.tabs{display:flex;gap:6px;margin:18px 0 22px;flex-wrap:wrap}
+  nav.tabs button{font-family:var(--sans);font-size:14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+    padding:8px 14px;border-radius:999px;cursor:pointer}
+  nav.tabs button.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .banner{border:1px solid var(--line);border-left:4px solid var(--accent);background:var(--panel);padding:10px 14px;border-radius:6px;margin:10px 0;font-size:13px}
+  .banner.ok{border-left-color:var(--ok)}
+  .banner.bad{border-left-color:var(--bad);background:#fdf1f0}
+  .banner.hide{display:none}
+  section.tabpane{display:none}
+  section.tabpane.active{display:block}
+  .lead{color:var(--muted);max-width:70ch;margin:0 0 18px}
+  .group{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:16px 18px;margin:0 0 16px}
+  .group h3{font-family:var(--serif);font-weight:400;font-size:20px;margin:0 0 12px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:680px){.grid{grid-template-columns:1fr}}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field.full{grid-column:1/-1}
+  .field label{font-size:13px;font-weight:600}
+  .field .req{color:var(--accent)}
+  .field .help{font-size:12px;color:var(--muted)}
+  .field input,.field textarea{font-family:var(--sans);font-size:14px;border:1px solid var(--line);border-radius:6px;padding:8px 10px;background:#fff;color:var(--ink);width:100%}
+  .field textarea{min-height:64px;resize:vertical}
+  .field input:focus,.field textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+  .field.invalid input,.field.invalid textarea{border-color:var(--bad);background:#fdf1f0}
+  .field .err{font-size:12px;color:var(--bad);display:none}
+  .field.invalid .err{display:block}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0 4px}
+  button.primary{font-family:var(--sans);font-size:15px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:11px 20px;cursor:pointer;font-weight:600}
+  button.primary:hover{filter:brightness(.95)}
+  button.ghost{font-family:var(--sans);font-size:14px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px 16px;cursor:pointer}
+  .stepcard{border:1px solid var(--line);border-radius:10px;background:var(--panel);margin:0 0 16px;overflow:hidden}
+  .stepcard .head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:#fbf3ea;border-bottom:1px solid var(--line)}
+  .stepcard .head .t{font-family:var(--serif);font-size:19px}
+  .stepcard .head .right{display:flex;align-items:center;gap:8px}
+  .badge{font-size:11px;padding:3px 8px;border-radius:999px;font-weight:600}
+  .badge.ok{background:#e7f2e9;color:var(--ok)}
+  .badge.bad{background:#fbe3e1;color:var(--bad)}
+  .stepcard pre{margin:0;padding:14px;font-family:var(--mono);font-size:12.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto;background:var(--panel)}
+  .diag-row{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--line);font-size:14px}
+  .diag-row .mark{font-weight:700;min-width:46px}
+  .diag-row .mark.ok{color:var(--ok)} .diag-row .mark.bad{color:var(--bad)}
+  code{font-family:var(--mono);background:#f1e9dc;padding:1px 5px;border-radius:4px;font-size:12.5px}
+  .muted{color:var(--muted)}
+  ol.steps{margin:0 0 4px;padding-left:20px} ol.steps li{margin:4px 0}
+  footer.foot{margin-top:30px;border-top:1px solid var(--line);padding-top:12px;color:var(--muted);font-size:12px}
+  /* ---- Beautifier ---- */
+  .bf-controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+  #bfInput{width:100%;min-height:150px;font-family:var(--mono);font-size:12.5px;border:1px solid var(--line);border-radius:8px;padding:12px;background:#fff;color:var(--ink)}
+  #reportArea{margin-top:14px}
+  .report{background:#fff;border:1px solid var(--line);border-radius:10px;padding:46px 54px}
+  @media(max-width:680px){.report{padding:26px 20px}}
+  .report .rpt-h1{font-family:var(--serif);font-weight:400;font-size:40px;line-height:1.1;margin:0 0 8px;border-bottom:3px solid var(--accent);padding-bottom:14px}
+  .report .rpt-h2{font-family:var(--serif);font-weight:400;font-size:27px;margin:34px 0 10px}
+  .report .rpt-h3{font-family:var(--sans);font-weight:700;font-size:15px;letter-spacing:.03em;text-transform:uppercase;color:var(--accent);margin:22px 0 8px}
+  .report .rpt-h4,.report .rpt-h5,.report .rpt-h6{font-family:var(--sans);font-weight:700;font-size:14px;margin:16px 0 6px}
+  .report .rpt-p{margin:0 0 12px;font-size:15px;line-height:1.62}
+  .report .rpt-list{margin:0 0 14px;padding-left:22px} .report .rpt-list li{margin:4px 0}
+  .report .rpt-quote{margin:0 0 14px;padding:10px 16px;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 6px 6px 0;font-size:15px}
+  .report .rpt-hr{border:none;border-top:1px solid var(--line);margin:24px 0}
+  .report .rpt-code{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow:auto;font-family:var(--mono);font-size:12.5px;margin:0 0 14px}
+  .report .rpt-tablewrap{overflow:auto;margin:0 0 16px}
+  .report .rpt-table{border-collapse:collapse;width:100%;font-size:13px}
+  .report .rpt-table th{background:var(--ink);color:var(--paper);text-align:left;padding:8px 10px;font-weight:600}
+  .report .rpt-table td{border:1px solid var(--line);padding:7px 10px;vertical-align:top}
+  .report .rpt-table tbody tr:nth-child(even){background:#fbf7f0}
+  .report .rpt-chartwrap{margin:6px 0 18px}
+  .report .rpt-chart{width:100%;height:auto;max-width:720px}
+  .report .rpt-chart-bar{fill:var(--accent)}
+  .report .rpt-chart-lab{fill:var(--ink);font-family:var(--sans);font-size:13px}
+  .report .rpt-chart-val{fill:var(--muted);font-family:var(--mono);font-size:12px}
+  .report .rpt-raw{background:#fff7f5;border-left:3px solid var(--accent);padding-left:10px}
+  .report code{background:#f1e9dc}
+  @media print{
+    body *{visibility:hidden!important}
+    #reportArea,#reportArea *{visibility:visible!important}
+    #reportArea{position:absolute;left:0;top:0;width:100%}
+    .report{border:none;border-radius:0;padding:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>SMM Virality <span class="accent">Decoder</span></h1>
+    <span class="sub">Fills out 8 ready-to-paste instructions that research a niche, decode what’s going viral, and build a 30-day reel calendar + scripts. <strong>This page writes the instructions — you run them in a connected Claude chat.</strong></span>
+  </header>
+
+  <div id="reconBanner" class="banner hide"></div>
+
+  <nav class="tabs">
+    <button data-tab="intake" class="active">1 · Intake form</button>
+    <button data-tab="prompts">2 · Prompts (S1–S8)</button>
+    <button data-tab="beautify">3 · Beautifier</button>
+    <button data-tab="diag">System check</button>
+    <button data-tab="help">Help</button>
+  </nav>
+
+  <!-- ============ INTAKE ============ -->
+  <section class="tabpane active" id="tab-intake">
+    <p class="lead">Fill every <span class="req accent">*</span> required field. Then press <strong>Generate prompts</strong> — the tool builds the eight copy-paste prompts on the next tab. Your entries are saved in this browser automatically.</p>
+    <div id="formHost"></div>
+    <div class="actions">
+      <button class="primary" id="btnGenerate">Generate prompts →</button>
+      <button class="ghost" id="btnDemo">See a filled-in example</button>
+      <button class="ghost" id="btnClear">Clear form</button>
+      <span id="formMsg" class="muted"></span>
+    </div>
+  </section>
+
+  <!-- ============ PROMPTS ============ -->
+  <section class="tabpane" id="tab-prompts">
+    <div class="banner">
+      <strong>Before you paste these anywhere — read this.</strong><br>
+      These are instructions for a <strong>specially set-up Claude chat</strong> that has three tools connected:
+      <strong>Apify</strong> (pulls the Instagram data), <strong>Higgsfield</strong> (analyses the videos), and
+      <strong>Google&nbsp;Drive</strong> (saves each step). Pasting them into regular ChatGPT or plain Claude will <em>not</em> work.
+      If you don’t have that chat, ask your admin to set it up. <a id="chatLink" data-chat-link="" href="#" style="display:none">Open the connected chat →</a>
+    </div>
+    <p class="lead">Then run them <strong>in order, S1 → S8</strong>: copy one, paste it, let it finish and save to Drive, then the next. Don’t skip ahead — each step needs the previous step’s saved file. Keep <strong>S3 and S4 in one sitting</strong> (Instagram video links expire within hours).</p>
+    <div id="promptHost"><p class="muted">No prompts yet — fill the intake form and press <em>Generate prompts</em>.</p></div>
+  </section>
+
+  <!-- ============ BEAUTIFIER ============ -->
+  <section class="tabpane" id="tab-beautify">
+    <p class="lead">Paste the <strong>S8 report</strong> (or any step's markdown) and turn it into a clean, branded report you can print or save as PDF. <strong>Nothing is silently dropped</strong> — any block the renderer doesn't recognise is still shown.</p>
+    <div class="bf-controls">
+      <button class="primary" id="btnRender">Render report →</button>
+      <button class="ghost" id="btnPrint">Print / Save as PDF</button>
+      <button class="ghost" id="btnSampleReport">Load sample report</button>
+      <span id="bfMsg" class="muted"></span>
+    </div>
+    <textarea id="bfInput" placeholder="Paste the S8 markdown report here…"></textarea>
+    <div id="bfWarn" class="banner bad hide"></div>
+    <div id="reportArea"></div>
+  </section>
+
+  <!-- ============ DIAGNOSTICS ============ -->
+  <section class="tabpane" id="tab-diag">
+    <p class="lead"><strong>For the people who maintain this tool.</strong> If a red banner ever asks you to run a system check, click below and screenshot the result for your developer. It self-tests that the tool is healthy — all prompts build correctly with a built-in example client, and nothing is missing.</p>
+    <div class="actions"><button class="primary" id="btnDiag">Run system check</button></div>
+    <div id="diagHost"></div>
+  </section>
+
+  <!-- ============ HELP ============ -->
+  <section class="tabpane" id="tab-help">
+    <div class="group">
+      <h3>How to use this tool</h3>
+      <ol class="steps">
+        <li>On <strong>Intake form</strong>, fill the client's details. Required fields are marked <span class="req accent">*</span>.</li>
+        <li>Press <strong>Generate prompts</strong>. The <strong>Prompts</strong> tab fills with S1–S8.</li>
+        <li>Open a Claude chat that has the <strong>Apify + Higgsfield + Google Drive</strong> connectors.</li>
+        <li>Copy <strong>S1</strong>, paste, let it run, and let it save to the Drive vault. Then S2, S3 … through S8. <em>Do not skip ahead</em> — each step loads the previous step's saved file.</li>
+        <li>Keep the whole S3→S4 decode in <strong>one session</strong> — Instagram video links expire within hours.</li>
+      </ol>
+    </div>
+    <div class="group">
+      <h3>If something goes wrong</h3>
+      <ul>
+        <li><strong>"Approve permissions" error from an actor?</strong> Copy the link it shows to the owner to approve once in the Apify console, then re-run that prompt.</li>
+        <li><strong>A video link gives a 403 / expired?</strong> Re-scrape that single reel in the same chat before decoding it. Never let the model write a transcript from the caption.</li>
+        <li><strong>A later prompt says a vault file is missing?</strong> Go back and make sure the earlier step actually saved to Drive (each step echoes its saved path).</li>
+        <li><strong>Reconciler banner is red at the top?</strong> The templates and form fields are out of sync — tell the developer; do not run the prompts.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer class="foot">
+    SMM Virality Decoder · single-file dashboard · no accounts, no tracking — your inputs never leave this browser.
+  </footer>
+</div>
+
+<!-- ===== RAW PROMPT TEMPLATES (injected verbatim from PROMPTS.md; do not hand-edit) ===== -->
+<script type="text/plain" class="raw-prompt" data-step="S1">You are a senior social-media research analyst. Establish whatever BASELINE the client's own Instagram
+allows — many clients are brand-new or near-empty, and that is expected and fine. Be mechanical and
+honest: report counts, never invent numbers. A "NEW/THIN ACCOUNT" verdict is a correct, useful answer.
+
+CLIENT CONTEXT
+- Client: {{CLIENT_NAME}}[[IF CLIENT_HANDLE]]  (@{{CLIENT_HANDLE}})[[ENDIF]]
+[[IF CLIENT_WEBSITE]]- Website / destination: {{CLIENT_WEBSITE}}[[ENDIF]]
+- Niche: {{NICHE}}
+- Services (priority order): {{SERVICES}}
+- Ideal customer (ICP): {{ICP}}
+- Geo: {{GEO_PRIMARY}}
+- Primary language: {{LANGUAGE_PRIMARY}}
+- Hard no-go (never produce): {{NO_GO_TOPICS}}
+[[IF ADDITIONAL_NOTES]]- Operator notes (extra context — voice, proof, constraints): {{ADDITIONAL_NOTES}}[[ENDIF]]
+
+STEP 0 — DECIDE THE MODE.
+[[IF CLIENT_HANDLE]]Scrape the client's own reels. MCP — apify/instagram-reel-scraper:
+   { "username": ["{{CLIENT_HANDLE}}"], "resultsLimit": 90, "skipPinnedPosts": true }
+   Fetch full dataset items with `omit` for heavy blocks; never `fields=` on nested arrays. If the actor
+   returns an "approve-permissions" error, send the link to the owner to approve once, then re-run.
+   Count reels WITH a non-null `videoPlayCount` (call it n).[[ENDIF]]
+   - No handle provided, or n < 10  → MODE = NEW/THIN ACCOUNT.
+   - Otherwise                      → MODE = ESTABLISHED ACCOUNT.
+   State the chosen MODE on the first line of your output.
+
+IF MODE = NEW/THIN ACCOUNT:
+   - BASELINE_MEDIAN_PLAYS = "N/A — new/thin account (n=<count>)". Do NOT fabricate a baseline. S3's
+     outlier math uses each DISCOVERED account's own median, so the pipeline needs no client baseline —
+     discovery (S2) proceeds exactly the same.
+   - Brand voice: infer a RECOMMENDED voice from the niche, services, ICP and any operator notes (label
+     it RECOMMENDED, not observed). If a handful of posts exist, add observed traits and mark them so.
+   - Skip the play-count statistics; complete the HANDOFF SUMMARY with what you have.
+
+IF MODE = ESTABLISHED ACCOUNT, compute and REPORT as a table:
+   - n (reels analysed) and date range covered.
+   - BASELINE = MEDIAN of `videoPlayCount`. (Sacred — S3/S8 use it.) Report how many reels had
+     missing/zero `videoPlayCount` and whether you excluded or zero-filled them BEFORE the median. If
+     n < 30, stamp the BASELINE "LOW-CONFIDENCE (n=X)" and repeat that stamp in the HANDOFF SUMMARY.
+   - Mean plays + median:mean ratio (skew check).
+   - Engagement rate per reel = (likesCount + commentsCount) / videoPlayCount; report the median ER.
+   - Posting cadence: reels/week from `timestamp` spread.
+   - Top-5 and Bottom-5 reels by `videoPlayCount`: plays, ER, a one-line WHY-HYPOTHESIS (labelled
+     HYPOTHESIS, not fact).
+   - Format mix used (talking-head / voiceover+b-roll / text-on-screen / skit / before-after /
+     tutorial-listicle / other) with rough %.
+   - Brand voice read: 3–5 observed traits from captions + 3 example caption first-lines.
+   - Follower-quality sniff test: do plays/likes/comments move together, or is there an engagement
+     anomaly (views high, comments dead = possible botting)? State the verdict.
+
+OUTPUT: the MODE line, then the relevant block above, terse. Then a HANDOFF SUMMARY (≤30 lines)
+containing exactly: MODE, BASELINE_MEDIAN_PLAYS (or "N/A"), n, median_ER (or "N/A"), cadence_per_week
+(or "N/A"), top_format (or "N/A"), voice (observed or RECOMMENDED, 3–5 traits), no_go (echo), one-line
+"biggest opportunity" hypothesis.
+
+VAULT SAVE: save the FULL report and the HANDOFF SUMMARY to Google Drive at
+"{{VAULT_FOLDER}}/s1-baseline.md". After saving, echo the exact saved path + file link and confirm you
+did NOT create a duplicate vault folder.
+If the Google Drive connector is unavailable, output the full file contents in a
+single code block and tell me to paste-save it as s1-baseline.md myself.</script>
+<script type="text/plain" class="raw-prompt" data-step="S2">You are a niche-research analyst. Find the reels worth decoding for {{CLIENT_NAME}} by searching the
+NICHE, not by trusting named competitors. Apply mechanical kill rules and REPORT every funnel count —
+do not silently skip a stage.
+
+CLIENT CONTEXT
+- Niche: {{NICHE}} · Services: {{SERVICES}} · ICP: {{ICP}}
+- Geo: {{GEO_PRIMARY}} · Language: {{LANGUAGE_PRIMARY}}[[IF LANGUAGE_SECONDARY]] / {{LANGUAGE_SECONDARY}}[[ENDIF]]
+
+DISCOVERY INPUTS
+- Niche search keywords (run one search PER keyword): {{NICHE_KEYWORDS}}
+[[IF NICHE_HASHTAGS]]- Niche hashtags (prefer mid-size, 100k–1M posts): {{NICHE_HASHTAGS}}[[ENDIF]]
+- Adjacent-niche keywords (for format transplant — keep these separate): {{ADJACENT_KEYWORDS}}
+[[IF COMPETITOR_HANDLES]]- Force-include these competitor handles as seeds: {{COMPETITOR_HANDLES}}[[ENDIF]]
+
+TASK
+PHASE A — WIDE NET (three legs — run ALL three, then print the RUN RECEIPT below).
+   Leg 1 — KEYWORDS: for EACH niche keyword, MCP — data-slayer/instagram-search-reels:
+     { "query": "<keyword>", "maxPages": 2 }  (≈12 reels/page, ~24/keyword; run SEPARATELY per keyword.)
+   Leg 2 — HASHTAGS (always run, even if the hashtag field is empty): use the operator hashtags above
+     if present; otherwise DERIVE 6–10 mid-size (100k–1M post) niche hashtags for {{NICHE}} yourself,
+     and run EACH as its own query through the same actor (a "#tag" string is a valid query). Do NOT
+     skip this leg — it is core to the wide net.
+   Leg 3 — ADJACENT: run each ADJACENT keyword the same way and TAG those results "ADJACENT".
+[[IF COMPETITOR_HANDLES]]   Leg 4 — SEEDS: also pull the force-include handles via
+     apify/instagram-reel-scraper ({ "username": [<handles>], "resultsLimit": 12,
+     "skipPinnedPosts": true }) and tag "SEED".[[ENDIF]]
+   Pool all results. Fetch full items with `omit`; if a query returns 0, report "0 results" and
+   continue (not fatal). HARD CAPS — do NOT raise them, report a shortfall instead: maxPages = 2 per
+   query; total pool ≈ 150 reels.
+   RUN RECEIPT (mandatory): a table — query | type (keyword/hashtag/adjacent/seed) | ran y/n | pages |
+   reels returned. The funnel is INVALID if any keyword/hashtag/adjacent query lacks a row; if you ran
+   fewer searches than queries, STOP and say so.
+   If an actor returns an "approve-permissions" error, send the link to the owner to approve once in
+   the Apify console, then re-run.
+PHASE B — MECHANICAL KILLS (apply in order; report how many die at each):
+   - inactive author (no recent posting signal in the data) ;
+   - aggregator / repost / meme-only accounts ;
+   - wrong language/geo — UNLESS the format is strong, then keep but tag "FORMAT-ONLY" ;
+   - engagement anomaly (huge plays, near-zero comments = likely botted) ;
+   - course-sellers / gurus posing as practitioners.
+   For each rule, list the usernames killed (a representative sample if large) — a kill COUNT with no
+   named accounts is REJECTED (don't fabricate rigor).
+PHASE C — CLASSIFY each survivor account:
+   EXACT (same niche + same audience) · ADJACENT (same audience diff service, OR same format diff niche
+   — transplant candidates) · MACRO (1M+ followers: decode HOOKS ONLY, reach is account-driven).
+PHASE D — name the accounts to deep-scrape in S3 (every EXACT + ADJACENT survivor).
+
+REPORT (mandatory funnel line):
+candidates_found → killed_by_rule (with per-rule counts) → survivors → {EXACT n, ADJACENT n, MACRO n}
+→ accounts_for_S3 (list usernames + the single best reel URL seen per account).
+
+OUTPUT: the funnel line, the kill table, and the classified account list with reel URLs. Terse.
+
+VAULT SAVE: save full report + HANDOFF SUMMARY (≤30 lines: funnel counts, the EXACT/ADJACENT/MACRO
+account lists, and the S3 deep-scrape target usernames) to "{{VAULT_FOLDER}}/s2-discovery.md". After
+saving, echo the exact path + link and confirm no duplicate folder was created.
+No Drive connector? Output the file in a code block for me to paste-save.</script>
+<script type="text/plain" class="raw-prompt" data-step="S3">You are a quantitative analyst. Turn the S2 candidates into a ranked outlier table using
+ACCOUNT-RELATIVE math. Raw play-count is misleading — a 314k reel can be only 1.7x its own account's
+median (a consistency winner), while a 365k reel on a small account is a 19x format outlier. Decode the
+outliers, not the loud numbers.
+
+VAULT LOAD (do this FIRST): load "{{VAULT_FOLDER}}/s2-discovery.md" (and "{{VAULT_FOLDER}}/s1-baseline.md"
+for the client's own baseline). LOAD RECEIPT: echo each file — found y/n + last-modified date. If a file
+is missing or empty, STOP and tell me which — never reconstruct a prior step's output from memory.
+
+TASK
+1) For EACH account named for deep-scrape in S2, MCP — apify/instagram-reel-scraper:
+   { "username": ["<account>"], "resultsLimit": 40, "skipPinnedPosts": true }
+   We want ≥30 reels per account to get a stable median. REPORT the actual n per account — some
+   profiles paginate short. Fetch full items with `omit`. If an actor returns an "approve-permissions"
+   error, send the link to the owner to approve once in Apify, then re-run.
+2) For each account compute ACCOUNT_MEDIAN = median `videoPlayCount` over its scraped reels.
+3) For every reel, OUTLIER_SCORE = videoPlayCount ÷ ACCOUNT_MEDIAN.
+   (Fallback only if an account's median is unavailable: videoPlayCount ÷ follower count, and label it.)
+   List follower-ratio fallback reels in a SEPARATE table — never co-rank them with account-relative
+   scores (the two numbers are not comparable).
+4) Thresholds: ≥5x = OUTLIER (decode-worthy); ≥20x = PRIORITY. Also flag CONSISTENCY WINNERS:
+   accounts whose ACCOUNT_MEDIAN is itself high vs peers — their repeatable SYSTEM is the prize, not one
+   reel. If an account's n < 20, label its scores LOW-CONFIDENCE and do NOT let it contribute a ≥20x
+   PRIORITY reel without a written caveat.
+5) SELECT the decode set: top 20–25 reels overall, composed of ≥15 EXACT, ≥5 ADJACENT (transplant),
+   ≤3 MACRO (hook-only). If a bucket can't be filled, print the SHORTFALL (e.g. "EXACT 9/15") and
+   proceed under-filled — reclassifying or padding to hit a quota is REJECTED.
+
+OUTPUT: one ranked table — rank | account | reel URL | plays | account_median (n) | OUTLIER_SCORE |
+class (EXACT/ADJACENT/MACRO) | consistency-winner? | reel videoUrl (direct, for S4). Then a 3-line read
+of what the scores reveal.
+
+VAULT SAVE: save full table + HANDOFF SUMMARY (≤30 lines: the selected 20–25 with scores, classes, and
+direct videoUrls) to "{{VAULT_FOLDER}}/s3-outliers.md". After saving, echo the exact path + link and
+confirm no duplicate folder was created.
+No Drive? Output the file in a code block to paste-save.</script>
+<script type="text/plain" class="raw-prompt" data-step="S4">You are a viral-content decoder. Decode each selected reel on THREE independent layers. Work in ONE
+session: Instagram CDN video URLs expire within hours, so transcribe/analyse a reel in the same run you
+fetched it — if a videoUrl 403s, re-scrape that single reel first; if re-scrape also fails, the
+VERBAL/VISUAL/OVERLAY layers for that reel MUST read "UNAVAILABLE — URL expired". Writing a transcript
+or overlay from the caption or topic is FABRICATION and is forbidden. End the step with a decoded-vs-
+URL-dead count.
+
+VAULT LOAD (FIRST): load "{{VAULT_FOLDER}}/s3-outliers.md" for the selected reels + their direct
+videoUrls. LOAD RECEIPT: echo found y/n + last-modified. If missing or empty, STOP — never reconstruct
+from memory.
+
+PER REEL — produce a CARD with these four blocks:
+VERBAL (full word-for-word):
+  - Default engine = transcription. MCP — donjuan_mime/audio-video-to-text:
+    { "source_url": "<the reel's videoUrl>", "model": "small" }   (use `small`, NOT `base`.)
+    If this rental actor returns an "approve-permissions" error, send the link to the owner to approve
+    once in Apify, then re-run.
+  - STATE the detected language + a confidence note BEFORE trusting any transcript. IF the reel is
+    non-English / music-only / heavy text-on-screen: Whisper output is INADMISSIBLE — use Higgsfield
+    video_analysis (it transcribes AND translates) or mark "no reliable verbal". Auto-detecting English
+    on a visibly non-English reel is a FAILURE, not a result. STATE which engine produced the verbal
+    layer. If there is no speech at all, write "no spoken track — message carried by overlay/visual".
+  - Capture: spoken hook (first ≤2s), structure beats, payoff, CTA.
+VISUAL (MANDATORY on at least the top 10 outliers — it is the ONLY source for the visual-hook channel
+  S5/S7 require; skipping it for all reels INVALIDATES those steps, so say so loudly if you ever must):
+  - Primary, MCP Higgsfield: (1) media_import_url("<videoUrl>") → media_id ;
+    (2) video_analysis_create({ "video_input_id": media_id }) ; (3) poll video_analysis_status.
+    Pull: first-frame composition, shot types, cut pace (avg shot length), whether captions are
+    burned-in or not, color/lighting mood, and the visual hook in second 1.
+  - Overlay-text specialist + fallback, MCP — grizzlygriff/video-llm-analyzer:
+    { "video": "<videoUrl>", "prompt": "Extract every on-screen text overlay verbatim with timing;
+      describe the first frame and cut pacing.", "llmProvider": "gemini",
+      "model": "google/gemini-2.5-flash", "skipDestination": true, "framesToExtract": 4,
+      "maxChargeUsd": 0.1 }   HARD CAP: never raise framesToExtract above 6 (the LLM 413s) — note thin
+      coverage instead. If the result is charge-capped or partial, mark the VISUAL block
+      "PARTIAL (cost-capped)" rather than presenting it as complete.
+  - IF no visual tool is connected, write "VISUAL skipped — audio + thumbnail only" (do not pretend).
+OVERLAY (the on-screen text as its own channel): the verbatim overlay words + placement/style. This is
+  a SEPARATE hook channel from the spoken words — keep it distinct. If overlay text could not be
+  independently read (no VISUAL run), write "OVERLAY not captured" — never copy the spoken hook here.
+PACKAGING: caption first line (the 4th hook), caption structure + CTA, hashtag mix (count + size tiers),
+  audio (`musicInfo`: trending sound vs original vs voiceover — capture song_name/artist/audio_id),
+  length in seconds, posting time.
+
+THEN TAG each card (BLUEPRINT §2.3 + §2.4):
+  HOOK TYPE · RETENTION DEVICE · PAYOFF (delivered? y/n) · SHARE TRIGGER · FORMAT. Give each card an ID
+  (C1, C2, …) — S7 scripts must cite these.
+
+CAPS: VERBAL on all selected 20–25; VISUAL on the top 10–12 only (mandatory on at least the top 10).
+
+OUTPUT: the decoded cards, compact. VAULT SAVE: full cards + HANDOFF SUMMARY (≤30 lines: card IDs with
+one-line hook + format + outlier score each; mark any UNAVAILABLE/low-confidence cards) to
+"{{VAULT_FOLDER}}/s4-decode.md". After saving, echo the exact path + link and confirm no duplicate
+folder was created.
+No Drive? Output the file in a code block to paste-save.</script>
+<script type="text/plain" class="raw-prompt" data-step="S5">You are a strategy synthesist. Roll up all decoded cards into the patterns that will drive the calendar
+and scripts. Separate the three hook channels — do not blend them.
+
+VAULT LOAD (FIRST): load s1-baseline, s2-discovery, s3-outliers, s4-decode from "{{VAULT_FOLDER}}/".
+LOAD RECEIPT: echo each of the 4 files — found y/n + last-modified. If ANY is missing or empty, STOP —
+do not proceed on three. Then count s4 cards that are fully decoded vs UNAVAILABLE/low-confidence; if
+fewer than ~15 carry real 3-layer data, STAMP the whole synthesis "LOW-CONFIDENCE" and do not assert
+THE GAP as fact.
+
+PRODUCE:
+1) HOOK BANK — three separate lists: VERBAL hooks, VISUAL (first-frame) hooks, OVERLAY-text hooks. Each
+   entry cites the card IDs it came from.
+2) FORMAT DISTRIBUTION — which formats are SATURATED in this niche (avoid or out-execute) vs ABSENT
+   (opportunity). Counts from the cards.
+3) LENGTH SWEET SPOT — seconds range of the highest outliers.
+4) AUDIO STRATEGY — trending-sound vs original vs voiceover split among winners; name recurring sounds.
+5) SHARE-TRIGGER FREQUENCY — which §2.3 triggers recur (identity / usefulness / awe / humor /
+   controversy / local pride).
+6) TRANSPLANT MAP — for each ADJACENT-tagged format: "proven format (adjacent niche) × {{NICHE}} =
+   concrete reel idea". At least 3 transplants.
+7) THE GAP — the single biggest thing NOBODY in the niche is doing that the decode says would work for
+   {{CLIENT_NAME}}. It MUST cite ≥3 specific card IDs as evidence (what's present) AND name what's
+   absent. A GAP with no card citations is REJECTED.
+
+OUTPUT: the seven sections, terse. VAULT SAVE: full synthesis + HANDOFF SUMMARY (≤30 lines: top 5
+verbal + 5 visual + 5 overlay hooks, the 3 transplants, THE GAP in one sentence) to
+"{{VAULT_FOLDER}}/s5-patterns.md". After saving, echo the exact path + link and confirm no duplicate
+folder was created.
+No Drive? Output the file in a code block to paste-save.</script>
+<script type="text/plain" class="raw-prompt" data-step="S6">You are a content strategist. Turn the patterns into a 30-day reel calendar for {{CLIENT_NAME}},
+balanced for REACH, NURTURE, and CONVERT — a calendar that chases only views builds a famous account
+with no customers.
+
+VAULT LOAD (FIRST): load s1-baseline and s5-patterns from "{{VAULT_FOLDER}}/". LOAD RECEIPT: echo each
+— found y/n + last-modified; if either is missing or empty, STOP — never reconstruct from memory.
+
+STRATEGY INPUTS
+- Posting capacity: {{POSTING_CAPACITY}}
+- Production modes available: {{PRODUCTION_MODES}}
+- Primary CTA: {{CTA_PRIMARY}}
+[[IF ADDITIONAL_NOTES]]- Operator notes (proof, preferred pillars, constraints): {{ADDITIONAL_NOTES}}[[ENDIF]]
+- Calendar starts the next Monday on/after {{CURRENT_DATE}} (state the actual start date you use).
+
+DERIVE PILLARS FIRST: from the services, the ICP and S5's patterns + THE GAP (plus any operator notes),
+define 3–5 content pillars and list them up front. Map every calendar slot to one of these pillars.
+
+RULES
+- MIX every week toward the 40/40/20 split:
+  40% REACH (decoded viral formats, broad relatable angle) ·
+  40% NURTURE (niche value: how-tos, mistakes, costs explained — saves & follows from the ICP) ·
+  20% CONVERT (proof, transformations, testimonials, offers). Build CONVERT slots from any proof in the
+  operator notes; if none was supplied, mark each CONVERT slot "needs a proof asset from the client"
+  rather than inventing a result.
+- Honor the cadence in {{POSTING_CAPACITY}} — CAP at 3 reels/week; a week with >3 slots is REJECTED
+  (the calendar must be filmable).
+- Pull hooks/formats from the S5 hook bank + transplant map; tag which card/transplant each derives
+  from. Every source card ID you cite MUST exist in the loaded s4/s5 set — cross-check, don't invent.
+
+OUTPUT — a calendar table, one row per slot:
+date | week | REACH/NURTURE/CONVERT | pillar | format (from bank) | hook concept | topic | audio rec |
+CTA | production-effort tag (phone-only / designer / on-site shoot — from {{PRODUCTION_MODES}}) |
+source (card ID or transplant). Print the LITERAL integer counts + percentages per bucket and per week.
+With a 2–3 reel/week cadence an exact 40/40/20 is usually impossible — show the NEAREST achievable split
+and FLAG the deviation; never claim "40/40/20" if the math doesn't.
+
+VAULT SAVE: full calendar + HANDOFF SUMMARY (≤30 lines: the split counts + the slot list dates/formats)
+to "{{VAULT_FOLDER}}/s6-calendar.md". After saving, echo the exact path + link and confirm no duplicate
+folder was created.
+No Drive? Output the file in a code block to paste-save.</script>
+<script type="text/plain" class="raw-prompt" data-step="S7">You are a viral scriptwriter who gets paid $100,000 per million views — but you also know that views
+that don't reach {{CLIENT_NAME}}'s buyers are worth $0. Write production-ready scripts that pass every
+quality gate. Brainstorm 2–3 candidates per reel internally, score them on the gates, output only the
+winner.
+
+VAULT LOAD (FIRST): load s4-decode, s5-patterns, s6-calendar from "{{VAULT_FOLDER}}/". LOAD RECEIPT:
+echo each — found y/n + last-modified; if any is missing or empty, STOP — never reconstruct from memory.
+[[IF ADDITIONAL_NOTES]]Operator notes (proof, voice, constraints): {{ADDITIONAL_NOTES}}.[[ENDIF]] Use the client's voice from s1-baseline (observed or RECOMMENDED). Hard no-go: {{NO_GO_TOPICS}}.
+
+FOR EACH reel in the S6 calendar (or the first N you're asked for), write a SCRIPT with:
+- THREE HOOKS, written separately and explicitly (a script with only "the hook" as one line is
+  REJECTED):
+    1. SPOKEN hook — the exact first words (≤2 seconds of speech).
+    2. VISUAL hook — the first-frame / first-motion direction (what the camera shows in second 1).
+    3. OVERLAY hook — the on-screen text, ≤8 words, readable in <1s. It MUST be a SECOND message, not a
+       transcript of the spoken hook — if overlay and spoken say the same thing, rewrite the overlay.
+- BODY beat-by-beat, each beat with its b-roll / shot direction.
+- PAYOFF — the hook's promise delivered (no clickbait without payoff).
+- CTA — tied to {{CTA_PRIMARY}}.
+- CAPTION — first-line hook + body + CTA.
+- HASHTAGS — a set sized per the S5 audio/hashtag findings.
+- AUDIO — specific sound or "original voiceover".
+- TARGET LENGTH — seconds, per the S5 sweet spot.
+
+QUALITY GATES (state a verdict for each, on each script — a bare "pass" is NOT accepted; quote the
+evidence asked for):
+- SWIPE TEST: would EACH of the 3 channels independently stop the scroll? (visual / verbal / overlay)
+- OVERLAY ≠ VERBAL: quote the SPOKEN line and the OVERLAY line side by side so the distinction is
+  auditable; reject & rewrite if they say the same thing.
+- ACCOUNT-SWAP TEST: could a competitor post this unchanged? To PASS, name the specific owned proof
+  point used (from the operator notes or s1-baseline). "Added personality" with no concrete proof is a
+  FAIL; if no proof is on file, flag the script "needs client proof" — do not invent one.
+- SHARE TRIGGER: name the one §2.3 trigger and why a human forwards it.
+- TRACEABILITY: cite the S4 card ID / S5 transplant each script derives from. If a cited card was
+  marked UNAVAILABLE/low-confidence in S4, the script INHERITS that flag and is labelled SPECULATIVE —
+  do not present it as decode-backed. No invented-from-nothing scripts.
+- NO-GO: quote the script's strongest claim and explain why it does NOT cross into {{NO_GO_TOPICS}}.
+
+OUTPUT: the winning scripts with their gate verdicts. VAULT SAVE: full scripts + HANDOFF SUMMARY
+(≤30 lines: one line per script — its 3-hook gist + source card + share trigger) to
+"{{VAULT_FOLDER}}/s7-scripts.md". After saving, echo the exact path + link and confirm no duplicate
+folder was created.
+No Drive? Output the file in a code block to paste-save.</script>
+<script type="text/plain" class="raw-prompt" data-step="S8">You are producing (a) a client-facing showcase report and (b) the monthly learning-loop re-run for
+{{CLIENT_NAME}}. Part (a) is paste-ready for the Beautifier. Part (b) makes next month smarter.
+
+VAULT LOAD (FIRST): load s1 through s7 from "{{VAULT_FOLDER}}/". LOAD RECEIPT: print a 7-file checklist
+(s1…s7, found y/n + last-modified). If ANY is missing, STOP and list which — do not assemble a partial
+showcase from memory.
+
+PART A — SHOWCASE REPORT (markdown, paste into the Beautifier):
+- Cover: {{CLIENT_NAME}} · {{NICHE}} · prepared {{CURRENT_DATE}}.
+- Research depth: funnel counts (from s2), reels decoded (from s4) — show the work.
+- Niche insights: saturated vs absent formats, hook bank highlights, THE GAP (from s5).
+- Strategy: the 40/40/20 logic + the 30-day calendar table (from s6).
+- A few flagship scripts (from s7) as examples.
+- Keep claims evidence-bound; for each headline number cite which vault file it came from. A count that
+  was flagged LOW-CONFIDENCE / UNAVAILABLE / PARTIAL upstream must NOT appear as a clean stat here.
+
+PART B — LEARNING LOOP (monthly re-run):
+The learning loop compares the client's OWN posts against their S1 baseline each month. It only runs
+once the client has an account with posts — if there is no client handle yet, write "Learning loop not
+yet active — client has no account/posts" and skip the rest of Part B.
+[[IF CLIENT_HANDLE]]- First check the S1 baseline's age + n. If older than ~60 days OR stamped
+  LOW-CONFIDENCE (n<30), RECOMPUTE the baseline from a fresh client scrape before any verdict.
+- MCP — apify/instagram-reel-scraper on the client's OWN last-30-days:
+  { "username": ["{{CLIENT_HANDLE}}"], "resultsLimit": 30, "skipPinnedPosts": true }
+  If the actor returns an "approve-permissions" error, send the link to the owner to approve once, re-run.
+- Outlier-score the client's own posts vs the S1 BASELINE_MEDIAN_PLAYS. If the baseline is "N/A —
+  new/thin account", treat this as MONTH 1: just record each post + its plays to SEED next month's
+  baseline, and skip keep/kill verdicts (nothing to compare against yet).
+- Verdicts (once a baseline exists): KEEP / KILL / DOUBLE-DOWN — double down on ≥3x posts, kill <0.5x
+  formats. Feed the verdicts into next month's S6.[[ENDIF]]
+
+OUTPUT: Part A markdown, then Part B verdict table. VAULT SAVE: Part A to
+"{{VAULT_FOLDER}}/s8-report.md" and Part B to "{{VAULT_FOLDER}}/s8b-learning-loop.md". After saving,
+echo BOTH exact paths + links, confirm no duplicate folder, and remind me that Part B must actually be
+run each month for the learning loop to function.
+No Drive? Output both files in code blocks to paste-save.</script>
+
+<!-- ===== Beautifier sample report (used by the System check + "Load sample report") ===== -->
+<script type="text/plain" id="sample-report">
+# SMM Virality Report — Acme Dental
+
+*Prepared 2026-06-12 · family dental clinic for busy parents · GTA*
+
+## Research depth
+
+- Candidate reels found: **148**
+- Killed by mechanical rules: **96**
+- Decoded (3-layer): **22**
+- Priority outliers (≥20×): **4**
+
+```chart
+Candidates found: 148
+Survivors: 52
+Decoded: 22
+Priority outliers: 4
+```
+
+## Niche insights
+
+The niche is **saturated** with talking-head "5 tips" reels but almost nobody runs *before/after*
+transformations set to trending audio. Overlay text is underused — a clear opening.
+
+> THE GAP: no one in family-dentistry is pairing a 0.5s before/after visual hook with an overlay
+> question ("Why does your kid hate the dentist?"). Evidence: cards C3, C7, C11.
+
+## Format distribution
+
+| Format | Share | Verdict |
+|---|---|---|
+| Talking-head tips | 58% | saturated — out-execute |
+| Before/after | 6% | **absent — opportunity** |
+| Skit / POV | 21% | competitive |
+| Voiceover + b-roll | 15% | open |
+
+## 30-Day calendar (excerpt)
+
+| Date | Type | Pillar | Format | Hook concept |
+|---|---|---|---|---|
+| Mon Jun 16 | REACH | Education | before/after | "Watch this tooth go from… " |
+| Wed Jun 18 | NURTURE | Trust | talking-head | "3 myths about kids' braces" |
+| Fri Jun 20 | CONVERT | Proof | testimonial | needs a proof asset from the client |
+
+## Flagship script — "The 7am brushing battle"
+
+### Three hooks
+1. SPOKEN: "If your kid screams at the toothbrush, watch this."
+2. VISUAL: child mid-tantrum, brush in hand, cut to calm 2 seconds later.
+3. OVERLAY: "Why your kid fights brushing"
+
+Caption to copy:
+
+```
+POV: brushing used to be a war 😅 Here's the 10-second trick our hygienists swear by.
+Comment BRUSH and we'll DM you the routine. 🦷 #kidsdentist #torontomom
+```
+
+## Future / unknown block
+
+::: callout this is a block type the renderer has never seen — it must still appear, not vanish :::
+<callout>raw angle brackets should be shown literally, not executed</callout>
+</script>
+
+<!-- ===== APP DATA: field definitions + derived keys + test fixture ===== -->
+<script id="appdata">
+const FIELD_KEYS=[
+ {key:'CLIENT_NAME',label:'Client name',group:'Client',type:'text',required:true,help:'The business this calendar is for.'},
+ {key:'CLIENT_HANDLE',label:'Client Instagram handle',group:'Client',type:'text',required:false,help:'Without the @. Leave blank if the account doesn’t exist yet (new clients) — the tool adapts.'},
+ {key:'CLIENT_WEBSITE',label:'Client website',group:'Client',type:'text',required:false,help:'Optional. Where the CTAs ultimately drive.'},
+ {key:'NICHE',label:'Niche',group:'Niche & offer',type:'text',required:true,help:'One line: what they do and who they serve — e.g. "family dental clinic for busy parents".'},
+ {key:'SERVICES',label:'Services (most important first)',group:'Niche & offer',type:'textarea',multiline:'flow',required:true,help:'What they sell, most important first.'},
+ {key:'ICP',label:'Ideal customer',group:'Niche & offer',type:'textarea',multiline:'flow',required:true,help:'Who exactly buys this? Be specific — their job, location, and the problem that keeps them up at night.'},
+ {key:'GEO_PRIMARY',label:'Main area served',group:'Niche & offer',type:'text',required:true,help:'Main city or region — e.g. "Toronto" or "London, UK".'},
+ {key:'LANGUAGE_PRIMARY',label:'Primary language',group:'Niche & offer',type:'text',required:true,default:'English'},
+ {key:'LANGUAGE_SECONDARY',label:'Secondary language / hook language',group:'Niche & offer',type:'text',required:false,help:'Optional.'},
+ {key:'NICHE_KEYWORDS',label:'Niche search keywords',group:'Discovery',type:'textarea',multiline:'list',required:true,minLines:3,help:'Phrases people type into Instagram search to find content like this. One per line, at least 3 — e.g. "google ads tips", "small business marketing".'},
+ {key:'NICHE_HASHTAGS',label:'Niche hashtags',group:'Discovery',type:'textarea',multiline:'list',required:false,help:'Optional — leave blank and the tool will pick them. If you add some, use medium-size tags. One per line.'},
+ {key:'ADJACENT_KEYWORDS',label:'Related topics to borrow video ideas from',group:'Discovery',type:'textarea',multiline:'list',required:true,help:'Different fields whose video styles you could copy — e.g. for a dentist: "skincare routines", "gym transformations". One per line.'},
+ {key:'COMPETITOR_HANDLES',label:'Known competitor handles',group:'Discovery',type:'textarea',multiline:'list',required:false,help:'Optional. Specific competitors to always include. One @handle per line.'},
+ {key:'NO_GO_TOPICS',label:'Things the content must never say',group:'Voice & guardrails',type:'textarea',multiline:'list',required:true,help:'Claims or topics to ban. One per line — e.g. "never promise guaranteed results".'},
+ {key:'POSTING_CAPACITY',label:'Posting capacity',group:'Content strategy',type:'text',required:true,help:'How many reels per week, and who films them.'},
+ {key:'PRODUCTION_MODES',label:'How videos get made',group:'Content strategy',type:'text',required:true,help:'e.g. phone (founder on camera), AI-avatar, designer/editor.'},
+ {key:'CTA_PRIMARY',label:'Main call-to-action (CTA)',group:'Content strategy',type:'text',required:true,help:'What you want viewers to do — e.g. "comment a keyword to get a DM", "book a call".'},
+ {key:'ADDITIONAL_NOTES',label:'Anything else worth knowing',group:'Anything else',type:'textarea',multiline:'flow',required:false,help:'Optional catch-all: brand voice, proof/results to feature, preferred content themes, constraints — anything not covered above. The prompts use this wherever relevant.'},
+ {key:'VAULT_FOLDER',label:'Google Drive folder for saved files',group:'Ops',type:'text',required:true,help:'The AI saves each step’s results here. Auto-named after the client as you type — you don’t need to create the folder yourself.'}
+];
+const DERIVED_KEYS=['CURRENT_DATE'];
+const TEST_CLIENT={
+ CLIENT_NAME:'PPC Guru', CLIENT_HANDLE:'ppcguru.ca', CLIENT_WEBSITE:'ppcguru.ca',
+ NICHE:'performance-marketing / lead-gen agency for local service businesses',
+ SERVICES:'Google & Meta Ads management (frustrated-buyer angle) → AI Visibility/AEO → Website & Funnel dev → AI Clone/Avatar video → Social Media Management',
+ ICP:'local service-business owners (renovation, clinics, restaurants, realtors), including South-Asian diaspora owners who are WhatsApp-first',
+ GEO_PRIMARY:'GTA', LANGUAGE_PRIMARY:'English', LANGUAGE_SECONDARY:'Hindi/Gujarati hooks',
+ NICHE_KEYWORDS:'google ads strategy\nmeta ads for small business\nlead generation agency\nfacebook ads results\ngoogle ads for contractors',
+ NICHE_HASHTAGS:'#googleads\n#leadgeneration\n#ppcmarketing\n#metaads',
+ ADJACENT_KEYWORDS:'agency owner day in the life\ngrow a marketing agency\nAI marketing tools\nhome renovation marketing',
+ COMPETITOR_HANDLES:'',
+ NO_GO_TOPICS:'no "we guarantee results"\nno "SEO is dead / nobody uses Google"',
+ POSTING_CAPACITY:'2–3 reels/week; founder-shot phone for trust pieces, AI avatar (Higgsfield) for the rest; editing in-house (Vanshika + video editor)',
+ PRODUCTION_MODES:'phone (founder on camera); AI-avatar (Higgsfield); fully-AI / storytelling',
+ CTA_PRIMARY:'Comment the keyword to get the plan in DMs / book a call (link in bio)',
+ ADDITIONAL_NOTES:'Voice: blunt, confident, proof-driven. Proof to feature: real client results across home services, realtors, clinics. Suggested pillars: Education, Social Proof/Case Studies, Origin/Founder Story, Contrarian/Industry-callout.',
+ VAULT_FOLDER:'PPC Guru — SMM Virality Vault'
+};
+const STEP_TITLES={S1:'Client Baseline',S2:'Niche Discovery',S3:'Outlier Harvest',S4:'Deep Decode',S5:'Pattern Synthesis',S6:'30-Day Calendar',S7:'Viral Scripts',S8:'Showcase + Learning Loop'};
+</script>
+
+<!-- ===== ENGINE: pure templating + reconciler (shared by browser UI and the node self-test) ===== -->
+<script id="engine">
+function todayISO(){const d=new Date();return d.toISOString().slice(0,10);}
+function fieldByKey(k){return FIELD_KEYS.find(f=>f.key===k);}
+// clean a single raw input into its inlined prompt value
+function cleanField(f, raw){
+  let v=(raw==null?'':String(raw)).trim();
+  if(!f) return v;
+  if(f.key==='CLIENT_HANDLE') v=v.replace(/^@+/,'').trim();
+  if(f.multiline==='list') v=v.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).join('; ');
+  else if(f.multiline==='flow') v=v.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).join(' ');
+  return v;
+}
+// build the full value map (cleaned fields + defaults + derived keys)
+function buildValues(raw){
+  const vals={};
+  FIELD_KEYS.forEach(f=>{ vals[f.key]=cleanField(f, raw[f.key]); });
+  if(!vals.LANGUAGE_PRIMARY) vals.LANGUAGE_PRIMARY='English';
+  if(!vals.VAULT_FOLDER) vals.VAULT_FOLDER=(vals.CLIENT_NAME?vals.CLIENT_NAME+' — ':'')+'SMM Virality Vault';
+  vals.CURRENT_DATE = raw.CURRENT_DATE || todayISO();
+  return vals;
+}
+// [[IF KEY]]...[[ENDIF]] — keep block when value non-empty, else strip (non-nested)
+function applyConditionals(text, vals){
+  return text.replace(/\[\[IF (\w+)\]\]([\s\S]*?)\[\[ENDIF\]\]/g, (m,key,body)=> (vals[key] && String(vals[key]).length)? body : '');
+}
+function replacePlaceholders(text, vals){
+  return text.replace(/\{\{(\w+)\}\}/g, (m,key)=> (Object.prototype.hasOwnProperty.call(vals,key))? vals[key] : m);
+}
+function generatePrompt(step, vals, RAW){
+  let t=RAW[step];
+  t=applyConditionals(t, vals);
+  t=replacePlaceholders(t, vals);
+  t=t.replace(/\n{3,}/g,'\n\n').trim();
+  return t;
+}
+// residual injectable token check
+function preflight(text){
+  // detect leftover placeholder tokens / conditional markers (not bare `}}` from JSON examples)
+  const hits=text.match(/\{\{|\[\[IF |\[\[ENDIF\]\]/g);
+  return hits? Array.from(new Set(hits)) : [];
+}
+// load-time reconciler over the raw templates
+function reconcile(RAW){
+  const allowed=new Set([...FIELD_KEYS.map(f=>f.key), ...DERIVED_KEYS]);
+  const used=new Set(); let m;
+  Object.values(RAW).forEach(t=>{
+    const re1=/\{\{(\w+)\}\}/g; while(m=re1.exec(t)) used.add(m[1]);
+    const re2=/\[\[IF (\w+)\]\]/g; while(m=re2.exec(t)) used.add(m[1]);
+  });
+  const orphans=[...used].filter(k=>!allowed.has(k));
+  const deadKeys=FIELD_KEYS.map(f=>f.key).filter(k=>!used.has(k));
+  return {orphans, deadKeys, used:[...used]};
+}
+// required + format validation; returns {KEY:errorMessage}
+function validate(raw){
+  const errs={}; const vals=buildValues(raw);
+  FIELD_KEYS.forEach(f=>{
+    const v=vals[f.key]||'';
+    if(f.required && !v){ errs[f.key]='Required.'; return; }
+    if(f.key==='CLIENT_HANDLE' && v && !/^[A-Za-z0-9._]{1,30}$/.test(v)) errs[f.key]='Handle: letters, numbers, dots, underscores only.';
+    if(f.minLines){ const n=(raw[f.key]||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean).length; if(n<f.minLines) errs[f.key]='Enter at least '+f.minLines+' (one per line).'; }
+  });
+  return errs;
+}
+// ---------- Beautifier: markdown → branded HTML (NO SILENT DROP) ----------
+function bfEscape(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function bfInline(s){ // s must already be HTML-escaped
+  s=s.replace(/`([^`]+)`/g,'<code>$1</code>');
+  s=s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+  s=s.replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g,'$1<em>$2</em>');
+  s=s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g,function(m,t,u){ var href=/^(https?:|mailto:)/i.test(u)? u.replace(/"/g,'%22') : '#'; return '<a href="'+href+'" target="_blank" rel="noopener">'+t+'</a>'; });
+  return s;
+}
+function bfTable(rows){
+  const cells=r=>r.replace(/^\s*\|/,'').replace(/\|\s*$/,'').split('|').map(c=>c.trim());
+  let header=null; const body=[];
+  rows.forEach((r,idx)=>{ const c=cells(r);
+    if(idx===0){ header=c; }
+    else if(idx===1 && c.every(x=>/^:?-{1,}:?$/.test(x.replace(/\s/g,''))||x==='')){ /* separator */ }
+    else body.push(c);
+  });
+  let h='<div class="rpt-tablewrap"><table class="rpt-table">';
+  if(header) h+='<thead><tr>'+header.map(x=>'<th>'+bfInline(bfEscape(x))+'</th>').join('')+'</tr></thead>';
+  h+='<tbody>'+body.map(row=>'<tr>'+row.map(x=>'<td>'+bfInline(bfEscape(x))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+  return h;
+}
+function bfChart(buf){ // each line "Label: number" → horizontal SVG bar chart
+  const data=buf.map(l=>l.match(/^\s*(.+?):\s*([\d.,]+)\s*$/)).filter(Boolean)
+    .map(m=>({label:m[1].trim(), val:parseFloat(m[2].replace(/,/g,''))})).filter(d=>!isNaN(d.val));
+  if(!data.length) return '<pre class="rpt-code"><code>'+bfEscape(buf.join('\n'))+'</code></pre>'; // fallback: never drop
+  const max=Math.max.apply(null,data.map(d=>d.val))||1, bw=460, rh=24, gap=10, h=data.length*(rh+gap)+8;
+  let svg='<svg class="rpt-chart" viewBox="0 0 700 '+h+'" preserveAspectRatio="xMinYMin meet" role="img">';
+  data.forEach((d,idx)=>{ const y=idx*(rh+gap)+6, w=Math.max(2,Math.round(d.val/max*bw));
+    svg+='<text x="0" y="'+(y+rh*0.72)+'" class="rpt-chart-lab">'+bfEscape(d.label)+'</text>';
+    svg+='<rect x="170" y="'+y+'" width="'+w+'" height="'+rh+'" rx="3" class="rpt-chart-bar"></rect>';
+    svg+='<text x="'+(176+w)+'" y="'+(y+rh*0.72)+'" class="rpt-chart-val">'+d.val.toLocaleString()+'</text>';
+  });
+  return '<div class="rpt-chartwrap">'+svg+'</svg></div>';
+}
+function renderMarkdown(md){
+  const lines=String(md==null?'':md).replace(/\r\n/g,'\n').split('\n');
+  const n=lines.length, covered=new Array(n).fill(false);
+  const blank=s=>/^\s*$/.test(s);
+  const startsBlock=s=>/^(#{1,6})\s|^\s*\||^\s*>|^\s*([-*+]|\d+\.)\s|^\s*```+|^\s*([-*_])\3\3+\s*$/.test(s);
+  let html='', blocks=0, i=0;
+  while(i<n){
+    const line=lines[i];
+    if(blank(line)){ covered[i]=true; i++; continue; }
+    const fence=line.match(/^\s*```+\s*([\w-]+)?.*$/);
+    if(fence){ const lang=(fence[1]||'').toLowerCase(); covered[i]=true; i++; const buf=[];
+      while(i<n && !/^\s*```+\s*$/.test(lines[i])){ buf.push(lines[i]); covered[i]=true; i++; }
+      if(i<n){ covered[i]=true; i++; } blocks++;
+      html+= lang==='chart' ? bfChart(buf) : '<pre class="rpt-code"><code>'+bfEscape(buf.join('\n'))+'</code></pre>';
+      continue; }
+    const h=line.match(/^(#{1,6})\s+(.*)$/);
+    if(h && h[2].trim()!==''){ covered[i]=true; i++; blocks++; const lvl=h[1].length;
+      html+='<h'+lvl+' class="rpt-h'+lvl+'">'+bfInline(bfEscape(h[2].trim()))+'</h'+lvl+'>'; continue; }
+    if(/^\s*([-*_])\1\1+\s*$/.test(line)){ covered[i]=true; i++; blocks++; html+='<hr class="rpt-hr">'; continue; }
+    if(/^\s*\|.*\|\s*$/.test(line)){ const tbl=[];
+      while(i<n && /^\s*\|.*\|\s*$/.test(lines[i])){ tbl.push(lines[i]); covered[i]=true; i++; }
+      blocks++; html+=bfTable(tbl); continue; }
+    if(/^\s*>/.test(line)){ const buf=[];
+      while(i<n && /^\s*>/.test(lines[i])){ buf.push(lines[i].replace(/^\s*>\s?/,'')); covered[i]=true; i++; }
+      blocks++; html+='<blockquote class="rpt-quote">'+bfInline(bfEscape(buf.join(' ')))+'</blockquote>'; continue; }
+    if(/^\s*([-*+]|\d+\.)\s+/.test(line)){ const ordered=/^\s*\d+\.\s+/.test(line), items=[];
+      while(i<n && /^\s*([-*+]|\d+\.)\s+/.test(lines[i])){ items.push(lines[i].replace(/^\s*([-*+]|\d+\.)\s+/,'')); covered[i]=true; i++; }
+      blocks++; const tag=ordered?'ol':'ul';
+      html+='<'+tag+' class="rpt-list">'+items.map(it=>'<li>'+bfInline(bfEscape(it))+'</li>').join('')+'</'+tag+'>'; continue; }
+    // paragraph: gather consecutive non-blank lines that don't start a new block
+    const para=[];
+    while(i<n && !blank(lines[i]) && !startsBlock(lines[i])){ para.push(lines[i]); covered[i]=true; i++; }
+    if(para.length){ blocks++; html+='<p class="rpt-p">'+bfInline(bfEscape(para.join(' ')))+'</p>'; }
+    else { // safety net — consume one line generically so nothing can ever vanish
+      blocks++; html+='<p class="rpt-p rpt-raw">'+bfInline(bfEscape(lines[i]))+'</p>'; covered[i]=true; i++; }
+  }
+  const dropped=[]; for(let k=0;k<n;k++){ if(!covered[k] && !blank(lines[k])) dropped.push(k+1); }
+  return {html, blocks, dropped, totalLines:n};
+}
+
+// expose for node self-test
+if(typeof module!=='undefined'&&module.exports){module.exports={FIELD_KEYS,DERIVED_KEYS,TEST_CLIENT,buildValues,applyConditionals,replacePlaceholders,generatePrompt,preflight,reconcile,validate,renderMarkdown};}
+</script>
+
+<!-- ===== UI: DOM wiring (browser only) ===== -->
+<script id="ui">
+(function(){
+  if(typeof document==='undefined') return;
+  const RAW={}; document.querySelectorAll('script.raw-prompt').forEach(s=>{ RAW[s.dataset.step]=s.textContent; });
+  const STEPS=Object.keys(RAW).sort();   // single source of truth for the step list (no hand-maintained duplicate)
+  const STORE='smm_intake_v1';
+  const $=s=>document.querySelector(s); const ce=(t,c)=>{const e=document.createElement(t); if(c)e.className=c; return e;};
+
+  // ---- tabs ----
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.querySelectorAll('section.tabpane').forEach(p=>p.classList.remove('active'));
+    $('#tab-'+b.dataset.tab).classList.add('active');
+  }));
+
+  // ---- build the form ----
+  const host=$('#formHost'); const groups={};
+  FIELD_KEYS.forEach(f=>{ (groups[f.group]=groups[f.group]||[]).push(f); });
+  Object.keys(groups).forEach(gName=>{
+    const g=ce('div','group'); const h=ce('h3'); h.textContent=gName; g.appendChild(h);
+    const grid=ce('div','grid');
+    groups[gName].forEach(f=>{
+      const wrap=ce('div','field'+((f.type==='textarea')?' full':''));
+      wrap.dataset.key=f.key;
+      const lab=ce('label'); lab.innerHTML=f.label+(f.required?' <span class="req">*</span>':' <span class="muted">(optional)</span>');
+      wrap.appendChild(lab);
+      let inp;
+      if(f.type==='textarea'){ inp=ce('textarea'); }
+      else { inp=ce('input'); inp.type=(f.type==='date')?'date':'text'; }
+      inp.id='f_'+f.key; if(f.default) inp.value=f.default;
+      inp.addEventListener('input',save);
+      wrap.appendChild(inp);
+      if(f.help){ const hp=ce('div','help'); hp.textContent=f.help; wrap.appendChild(hp); }
+      const er=ce('div','err'); er.textContent='Required.'; wrap.appendChild(er);
+      grid.appendChild(wrap);
+    });
+    g.appendChild(grid); host.appendChild(g);
+  });
+
+  function readForm(){ const o={}; FIELD_KEYS.forEach(f=>{ o[f.key]=($('#f_'+f.key)||{}).value||''; }); return o; }
+  function writeForm(o){ FIELD_KEYS.forEach(f=>{ const el=$('#f_'+f.key); if(el) el.value=o[f.key]||''; }); }
+  function save(){ try{ localStorage.setItem(STORE, JSON.stringify(readForm())); }catch(e){} }
+  function restore(){ try{ const s=localStorage.getItem(STORE); if(s){ const o=JSON.parse(s); if(o&&typeof o==='object') writeForm(o); } }catch(e){} }
+
+  // ---- reconciler banner on load ----
+  function showRecon(){
+    const r=reconcile(RAW); const b=$('#reconBanner');
+    if(r.orphans.length){
+      b.className='banner bad';
+      b.innerHTML='<strong>This tool has a problem — it’s not your fault.</strong> Please don’t use these prompts; contact your developer. <span class="muted">(unmatched placeholders: '+r.orphans.join(', ')+')</span>';
+    } else { b.className='banner hide'; }
+    return r;
+  }
+
+  // ---- generate ----
+  function clearErrors(){ document.querySelectorAll('.field.invalid').forEach(el=>el.classList.remove('invalid')); }
+  function markErrors(errs){
+    clearErrors();
+    Object.keys(errs).forEach(k=>{ const w=document.querySelector('.field[data-key="'+k+'"]'); if(w){ w.classList.add('invalid'); const er=w.querySelector('.err'); if(er) er.textContent=errs[k]; } });
+  }
+  function generate(){
+    const rec=reconcile(RAW); if(rec.orphans.length){ showRecon(); document.querySelector('nav.tabs button[data-tab="intake"]').click(); return false; }
+    const raw=readForm(); const errs=validate(raw);
+    if(Object.keys(errs).length){
+      markErrors(errs);
+      $('#formMsg').innerHTML='<span style="color:var(--bad)">Fix '+Object.keys(errs).length+' field(s) highlighted above.</span>';
+      const first=document.querySelector('.field.invalid'); if(first&&first.scrollIntoView) first.scrollIntoView({behavior:'smooth',block:'center'});
+      return false;
+    }
+    clearErrors(); $('#formMsg').textContent='';
+    const vals=buildValues(raw); const host=$('#promptHost'); host.innerHTML='';
+    let allClean=true;
+    STEPS.forEach((step,i)=>{
+      const text=generatePrompt(step, vals, RAW); const pf=preflight(text); if(pf.length) allClean=false;
+      const card=ce('div','stepcard');
+      const head=ce('div','head');
+      const t=ce('div','t'); t.textContent=step+' — '+(STEP_TITLES[step]||''); head.appendChild(t);
+      const right=ce('div','right');
+      const badge=ce('span','badge '+(pf.length?'bad':'ok')); badge.textContent=pf.length?('⚠ '+pf.length+' leftover'):'✓ clean';
+      right.appendChild(badge);
+      const cp=ce('button','ghost'); cp.textContent='Copy step '+(i+1); cp.disabled=!!pf.length;
+      cp.addEventListener('click',()=>copyText(text,cp)); right.appendChild(cp);
+      head.appendChild(right); card.appendChild(head);
+      // order / dependency cue on every card
+      const cue=ce('div'); cue.style.cssText='font-size:12px;color:var(--muted);padding:6px 14px;border-bottom:1px solid var(--line)';
+      let msg='Step '+(i+1)+' of '+STEPS.length+(i>0?(' · run steps 1–'+i+' first and let each save to Drive'):' · start here');
+      if(step==='S3'||step==='S4') msg+=' · keep S3 + S4 in one sitting (video links expire within hours)';
+      cue.textContent=msg; card.appendChild(cue);
+      const pre=ce('pre'); pre.textContent=text; card.appendChild(pre);
+      host.appendChild(card);
+    });
+    // jump to prompts tab
+    document.querySelector('nav.tabs button[data-tab="prompts"]').click();
+    if(!allClean){ const b=$('#reconBanner'); b.className='banner bad'; b.innerHTML='<strong>This tool has a problem — it’s not your fault.</strong> One prompt didn’t fill in correctly (its Copy button is off). Please contact your developer.'; }
+    return allClean;
+  }
+  async function copyText(t,btn){
+    let okc=false;
+    try{ await navigator.clipboard.writeText(t); okc=true; }
+    catch(e){
+      try{ const ta=ce('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.focus(); ta.select(); okc=document.execCommand('copy'); ta.remove(); }catch(_){ okc=false; }
+    }
+    const old=btn.textContent;
+    btn.textContent= okc ? 'Copied ✓' : 'Couldn’t copy — select & press Ctrl/Cmd-C';
+    setTimeout(()=>btn.textContent=old, okc?1400:3000);
+  }
+
+  // ---- diagnostics ----
+  function runDiagnostics(){
+    const host=$('#diagHost'); host.innerHTML=''; const checks=[];
+    const r=reconcile(RAW);
+    checks.push(['Reconciler — no orphan placeholders', r.orphans.length===0, r.orphans.length? ('orphans: '+r.orphans.join(', ')) : 'all template tokens map to a field']);
+    checks.push(['Reconciler — no dead form fields', r.deadKeys.length===0, r.deadKeys.length? ('unused: '+r.deadKeys.join(', ')) : 'every field is used by a prompt']);
+    const titleKeys=Object.keys(STEP_TITLES).sort();
+    const stepsConsistent = STEPS.length===8 && STEPS.join()===titleKeys.join();
+    checks.push(['Step list consistent (8 prompt blocks, titles match)', stepsConsistent, STEPS.join(', ')]);
+    const vals=buildValues(TEST_CLIENT); let genOk=true, emptyOk=true, leftover=[];
+    STEPS.forEach(step=>{
+      const text=generatePrompt(step, vals, RAW); if(!text||text.length<50) emptyOk=false;
+      const pf=preflight(text); if(pf.length){ genOk=false; leftover.push(step+':'+pf.join(' ')); }
+    });
+    checks.push(['Test client generates all '+STEPS.length+' prompts', emptyOk, emptyOk?'all non-empty':'a prompt came back empty']);
+    checks.push(['No leftover placeholders in any prompt', genOk, genOk?'zero injectable {{ }} / [[ ]] tokens':leftover.join(' | ')]);
+    const rep=renderMarkdown((document.getElementById('sample-report')||{}).textContent||'');
+    checks.push(['Beautifier renders sample with nothing dropped', rep.dropped.length===0 && rep.blocks>0, rep.dropped.length?('dropped lines: '+rep.dropped.join(',')):(rep.blocks+' blocks, 0 dropped')]);
+    const fb=(((document.getElementById('sample-report')||{}).textContent||'').match(/^```/gm)||[]).length;
+    checks.push(['Beautifier sample code fences balanced', fb%2===0, fb+' fence markers']);
+    const blankErrs=validate({});
+    const expectBlank=FIELD_KEYS.filter(f=>f.required && !f.default && f.key!=='VAULT_FOLDER').length;
+    const valOk=expectBlank>0 && Object.keys(blankErrs).length===expectBlank;
+    checks.push(['Required-field validation fires on a blank form', valOk, valOk?(Object.keys(blankErrs).length+' blank required fields flagged (the 2 auto-filled ones correctly pass)'):('expected '+expectBlank+', got '+Object.keys(blankErrs).length)]);
+    const allPass=checks.every(c=>c[1]);
+    const head=ce('div','banner '+(allPass?'ok':'bad')); head.innerHTML='<strong>'+(allPass?'All checks passed ✓':'Some checks failed ✗')+'</strong> — '+checks.filter(c=>c[1]).length+'/'+checks.length;
+    host.appendChild(head);
+    checks.forEach(c=>{ const row=ce('div','diag-row'); const m=ce('div','mark '+(c[1]?'ok':'bad')); m.textContent=c[1]?'PASS':'FAIL'; const d=ce('div'); d.innerHTML='<strong>'+c[0]+'</strong><br><span class="muted">'+c[2]+'</span>'; row.appendChild(m); row.appendChild(d); host.appendChild(row); });
+  }
+
+  // ---- buttons ----
+  $('#btnGenerate').addEventListener('click',generate);
+  $('#btnDiag').addEventListener('click',runDiagnostics);
+  $('#btnDemo').addEventListener('click',()=>{ const has=FIELD_KEYS.some(f=>(($('#f_'+f.key)||{}).value||'').trim()); if(has && !confirm('This replaces what you’ve typed with the example. Continue?')) return; writeForm(TEST_CLIENT); save(); $('#formMsg').textContent='Example loaded — scroll through to see what good answers look like.'; });
+  $('#btnClear').addEventListener('click',()=>{ if(confirm('Clear all fields?')){ FIELD_KEYS.forEach(f=>{const el=$('#f_'+f.key); if(el) el.value=f.default||'';}); save(); $('#formMsg').textContent='Cleared.'; } });
+
+  // ---- beautifier ----
+  const SAMPLE_REPORT=(document.getElementById('sample-report')||{}).textContent||'';
+  function renderReport(){
+    const md=$('#bfInput').value||'';
+    const res=renderMarkdown(md);
+    $('#reportArea').innerHTML = md.trim()? '<div class="report">'+res.html+'</div>' : '<p class="muted">Paste a report above, then press Render.</p>';
+    const warn=$('#bfWarn'); const issues=[];
+    if(res.dropped.length) issues.push(res.dropped.length+' source line(s) were shown raw rather than dropped (lines '+res.dropped.join(', ')+')');
+    const fences=(md.match(/^```/gm)||[]).length; if(fences%2!==0) issues.push('Unclosed code fence — '+fences+' ``` markers found; check the pasted text.');
+    if(issues.length){ warn.className='banner bad'; warn.innerHTML='<strong>Heads up:</strong> '+issues.join(' · '); } else { warn.className='banner hide'; }
+    $('#bfMsg').textContent=res.blocks+' blocks rendered'+(res.dropped.length?' · see warning':' · nothing dropped');
+  }
+  $('#btnRender').addEventListener('click',renderReport);
+  $('#btnSampleReport').addEventListener('click',()=>{ $('#bfInput').value=SAMPLE_REPORT.replace(/^\n/,''); renderReport(); });
+  $('#btnPrint').addEventListener('click',()=>{ if(!$('#reportArea').querySelector('.report')) renderReport(); if($('#reportArea').querySelector('.report')) window.print(); });
+
+  // ---- auto-name the vault folder from the client name (until the operator edits it) ----
+  (function(){ let lastAuto=''; const cn=$('#f_CLIENT_NAME'), vf=$('#f_VAULT_FOLDER');
+    if(cn&&vf){ cn.addEventListener('input',()=>{ if(vf.value===''||vf.value===lastAuto){ lastAuto=(cn.value.trim()?cn.value.trim()+' — ':'')+'SMM Virality Vault'; vf.value=lastAuto; save(); } }); } })();
+
+  // ---- connected-chat link (set data-chat-link on #chatLink to enable the button) ----
+  (function(){ const a=document.getElementById('chatLink'); if(a){ const u=(a.getAttribute('data-chat-link')||'').trim(); if(u){ a.href=u; a.target='_blank'; a.rel='noopener'; a.style.display='inline-block'; a.style.cssText='display:inline-block;margin-top:6px;font-weight:600'; } } })();
+
+  // ---- init ----
+  restore(); showRecon();
+})();
+</script>
+</body>
+</html>
