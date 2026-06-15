@@ -187,15 +187,24 @@ outputs; Research Vault save/load (§6); steps runnable in fresh chats.
 - **S5 — Pattern Synthesis & The Gap.** Roll-up: hook bank (verbal / visual / overlay SEPARATELY),
   format distribution (saturated vs absent), length sweet spot, audio strategy, share-trigger
   frequency, transplant map (adjacent format × client niche), and THE GAP: what nobody in the
-  niche is doing that the decode says would work.
+  niche is doing that the decode says would work. **Geo/language skew guard:** tally the ORIGIN of
+  the decoded winners (carried from S2/S3/S4); if they cluster in one geo/language or a non-client
+  sub-niche, stamp the synthesis GEO-SKEWED and carry the caveat into THE GAP — the format still
+  transplants, but the sample isn't representative; recommend a broader, geo-balanced re-run.
 - **S6 — Content Strategy + 30-Day Calendar.** 40/40/20 split (§2.7) mapped onto the client's
   pillars; per slot: date, pillar, format (from bank), hook concept, topic, audio rec, CTA,
   production effort tag (phone-only / designer / on-site shoot). This output feeds the agency's
   SMM "Content Strategy & Calendar" stage directly.
-- **S7 — Viral Scripts (the money output; designer/editor handoff — internal only).** For each
-  calendar reel: the THREE hooks verbatim (§2.1 — spoken words, first-frame visual direction,
-  overlay text ≤8 words), beat-by-beat body with b-roll/shot directions per beat, payoff, CTA,
-  caption (first-line hook + body + CTA), hashtag set, audio, target length.
+- **S7 — Viral Scripts (the money output; designer/editor handoff — internal only).** **Coverage is
+  1:1 with the calendar — N slots produce N scripts, ending with a COVERAGE CHECK (X/N); a partial
+  "flagship-only" set is rejected.** Each reel is written as a **two-column shooting script** (a
+  markdown table): `TIME | AUDIO — what they HEAR | VISUAL & TEXT — what they SEE & READ`,
+  beat-by-beat, timecodes summing to the target length. The AUDIO column is the spoken script only
+  (silent/trending-audio reels say "— no voiceover —" and carry the message as on-screen TEXT on the
+  right). The first row IS the hook and carries all three channels (§2.1 — spoken / first-frame
+  visual / overlay text ≤8 words; overlay must be a *second* message). Under each table a footer:
+  **HOOK · CALL TO ACTION · WHY IT'LL GO VIRAL** (the decoded mechanism + share trigger), plus
+  caption, hashtags, audio, length.
   **Quality gates (all mandatory, mirror the ads doctrine):**
   - Swipe test verdict per script (would each of the 3 channels alone stop the scroll?).
   - Account-swap test (logo-swap analog): if any competitor could post this script unchanged,
@@ -204,10 +213,14 @@ outputs; Research Vault save/load (§6); steps runnable in fresh chats.
   - Traceability: every script cites which decoded reel/format it derives from (S4 card ID) —
     no invented-from-thin-air scripts.
   - Divergent ideation: brainstorm 2-3x candidates internally, score on the gates, output winners.
-- **S8 — Client Showcase Report + Learning Loop.** (a) Client-facing visual report: research
-  depth (funnel counts, reels decoded), niche insights, strategy, the calendar — beautified,
-  charts, 8-12 pages. (b) MONTHLY RE-RUN: scrape client's own last-30-days reels, outlier-score
-  our own posts vs S1 baseline, "keep / kill / double-down" verdicts, feed S6's next month.
+- **S8 — Client Showcase Report + Learning Loop.** (a) Client-facing visual report that SHOWS THE
+  RESEARCH: how-we-researched-it (funnel counts + the three-layer decode method & tools), the
+  accounts decoded **with their origin** (and any GEO-SKEW flag), niche insights, strategy, the full
+  calendar, and **every S7 script in two-column format (1:1 with the calendar)** — beautified,
+  charts, 8-12+ pages. Load is by exact filename; **s2-discovery + s3-outliers are non-negotiable
+  inputs** (STOP if missing — the research section can't be honest without them). (b) MONTHLY
+  RE-RUN: scrape client's own last-30-days reels, outlier-score our own posts vs S1 baseline,
+  "keep / kill / double-down" verdicts, feed S6's next month.
 
 ## 6. Architecture: reuse the PATTERNS, not the code
 

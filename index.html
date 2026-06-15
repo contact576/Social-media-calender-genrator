@@ -296,17 +296,23 @@ PHASE B — MECHANICAL KILLS (apply in order; report how many die at each):
 PHASE C — CLASSIFY each survivor account:
    EXACT (same niche + same audience) · ADJACENT (same audience diff service, OR same format diff niche
    — transplant candidates) · MACRO (1M+ followers: decode HOOKS ONLY, reach is account-driven).
+   For EACH survivor also RECORD its ORIGIN — geo/country signal + primary language (read from the
+   profile, captions, and the reel's spoken/written language). This travels with the account through
+   S3/S4 so S5 can catch a geo/language skew (e.g. every winner from one country). Do not guess a
+   precise country you can't see — "geo unclear" is an acceptable, honest value.
 PHASE D — name the accounts to deep-scrape in S3 (every EXACT + ADJACENT survivor).
 
 REPORT (mandatory funnel line):
 candidates_found → killed_by_rule (with per-rule counts) → survivors → {EXACT n, ADJACENT n, MACRO n}
-→ accounts_for_S3 (list usernames + the single best reel URL seen per account).
+→ accounts_for_S3 (list usernames + ORIGIN (geo/language) + the single best reel URL seen per account).
 
 OUTPUT: the funnel line, the kill table, and the classified account list with reel URLs. Terse.
 
 VAULT SAVE: save full report + HANDOFF SUMMARY (≤30 lines: funnel counts, the EXACT/ADJACENT/MACRO
-account lists, and the S3 deep-scrape target usernames) to "{{VAULT_FOLDER}}/s2-discovery.md". After
-saving, echo the exact path + link and confirm no duplicate folder was created.
+account lists WITH each account's ORIGIN (geo/language), and the S3 deep-scrape target usernames) to
+"{{VAULT_FOLDER}}/s2-discovery.md". After saving, echo the exact path + link and confirm no duplicate
+folder was created. This file is REQUIRED later — S8's report cannot be assembled without it, so do not
+skip the save.
 No Drive connector? Output the file in a code block for me to paste-save.</script>
 <script type="text/plain" class="raw-prompt" data-step="S3">You are a quantitative analyst. Turn the S2 candidates into a ranked outlier table using
 ACCOUNT-RELATIVE math. Raw play-count is misleading — a 314k reel can be only 1.7x its own account's
@@ -336,13 +342,13 @@ TASK
    ≤3 MACRO (hook-only). If a bucket can't be filled, print the SHORTFALL (e.g. "EXACT 9/15") and
    proceed under-filled — reclassifying or padding to hit a quota is REJECTED.
 
-OUTPUT: one ranked table — rank | account | reel URL | plays | account_median (n) | OUTLIER_SCORE |
-class (EXACT/ADJACENT/MACRO) | consistency-winner? | reel videoUrl (direct, for S4). Then a 3-line read
-of what the scores reveal.
+OUTPUT: one ranked table — rank | account | origin (geo/lang) | reel URL | plays | account_median (n) |
+OUTLIER_SCORE | class (EXACT/ADJACENT/MACRO) | consistency-winner? | reel videoUrl (direct, for S4).
+Carry the ORIGIN through from S2 (geo unclear is fine). Then a 3-line read of what the scores reveal.
 
-VAULT SAVE: save full table + HANDOFF SUMMARY (≤30 lines: the selected 20–25 with scores, classes, and
-direct videoUrls) to "{{VAULT_FOLDER}}/s3-outliers.md". After saving, echo the exact path + link and
-confirm no duplicate folder was created.
+VAULT SAVE: save full table + HANDOFF SUMMARY (≤30 lines: the selected 20–25 with scores, classes,
+origins, and direct videoUrls) to "{{VAULT_FOLDER}}/s3-outliers.md". After saving, echo the exact path +
+link and confirm no duplicate folder was created. This file is REQUIRED by S8 — do not skip the save.
 No Drive? Output the file in a code block to paste-save.</script>
 <script type="text/plain" class="raw-prompt" data-step="S4">You are a viral-content decoder. Decode each selected reel on THREE independent layers. Work in ONE
 session: Instagram CDN video URLs expire within hours, so transcribe/analyse a reel in the same run you
@@ -389,13 +395,14 @@ PACKAGING: caption first line (the 4th hook), caption structure + CTA, hashtag m
   length in seconds, posting time.
 
 THEN TAG each card (BLUEPRINT §2.3 + §2.4):
-  HOOK TYPE · RETENTION DEVICE · PAYOFF (delivered? y/n) · SHARE TRIGGER · FORMAT. Give each card an ID
-  (C1, C2, …) — S7 scripts must cite these.
+  HOOK TYPE · RETENTION DEVICE · PAYOFF (delivered? y/n) · SHARE TRIGGER · FORMAT · ORIGIN (geo/language,
+  carried from s2/s3). Give each card an ID (C1, C2, …) — S7 scripts must cite these, and S5 uses ORIGIN
+  to detect geo/language skew.
 
 CAPS: VERBAL on all selected 20–25; VISUAL on the top 10–12 only (mandatory on at least the top 10).
 
 OUTPUT: the decoded cards, compact. VAULT SAVE: full cards + HANDOFF SUMMARY (≤30 lines: card IDs with
-one-line hook + format + outlier score each; mark any UNAVAILABLE/low-confidence cards) to
+one-line hook + format + outlier score + ORIGIN each; mark any UNAVAILABLE/low-confidence cards) to
 "{{VAULT_FOLDER}}/s4-decode.md". After saving, echo the exact path + link and confirm no duplicate
 folder was created.
 No Drive? Output the file in a code block to paste-save.</script>
@@ -407,6 +414,13 @@ LOAD RECEIPT: echo each of the 4 files — found y/n + last-modified. If ANY is 
 do not proceed on three. Then count s4 cards that are fully decoded vs UNAVAILABLE/low-confidence; if
 fewer than ~15 carry real 3-layer data, STAMP the whole synthesis "LOW-CONFIDENCE" and do not assert
 THE GAP as fact.
+
+GEO/LANGUAGE SKEW CHECK (do this before synthesising): tally the ORIGIN of the decoded cards (from s4).
+If the winners cluster in ONE geo or ONE language — or in a single sub-niche that isn't the client's
+own market — STAMP the synthesis "GEO-SKEWED", say so in plain words, and repeat it in THE GAP and the
+HANDOFF. The formats may still transplant (that's what the account-relative score proves), but the
+sample is not representative of {{GEO_PRIMARY}}; recommend a broader, geo-balanced re-run. Never present
+a skewed sample as if it represented the client's local market.
 
 PRODUCE:
 1) HOOK BANK — three separate lists: VERBAL hooks, VISUAL (first-frame) hooks, OVERLAY-text hooks. Each
@@ -424,8 +438,8 @@ PRODUCE:
    absent. A GAP with no card citations is REJECTED.
 
 OUTPUT: the seven sections, terse. VAULT SAVE: full synthesis + HANDOFF SUMMARY (≤30 lines: top 5
-verbal + 5 visual + 5 overlay hooks, the 3 transplants, THE GAP in one sentence) to
-"{{VAULT_FOLDER}}/s5-patterns.md". After saving, echo the exact path + link and confirm no duplicate
+verbal + 5 visual + 5 overlay hooks, the 3 transplants, THE GAP in one sentence, and the GEO/LANGUAGE
+SKEW verdict + confidence stamp) to "{{VAULT_FOLDER}}/s5-patterns.md". After saving, echo the exact path + link and confirm no duplicate
 folder was created.
 No Drive? Output the file in a code block to paste-save.</script>
 <script type="text/plain" class="raw-prompt" data-step="S6">You are a content strategist. Turn the patterns into a 30-day reel calendar for {{CLIENT_NAME}},
@@ -477,55 +491,82 @@ VAULT LOAD (FIRST): load s4-decode, s5-patterns, s6-calendar from "{{VAULT_FOLDE
 echo each — found y/n + last-modified; if any is missing or empty, STOP — never reconstruct from memory.
 [[IF ADDITIONAL_NOTES]]Operator notes (proof, voice, constraints): {{ADDITIONAL_NOTES}}.[[ENDIF]] Use the client's voice from s1-baseline (observed or RECOMMENDED). Hard no-go: {{NO_GO_TOPICS}}.
 
-FOR EACH reel in the S6 calendar (or the first N you're asked for), write a SCRIPT with:
-- THREE HOOKS, written separately and explicitly (a script with only "the hook" as one line is
-  REJECTED):
-    1. SPOKEN hook — the exact first words (≤2 seconds of speech).
-    2. VISUAL hook — the first-frame / first-motion direction (what the camera shows in second 1).
-    3. OVERLAY hook — the on-screen text, ≤8 words, readable in <1s. It MUST be a SECOND message, not a
-       transcript of the spoken hook — if overlay and spoken say the same thing, rewrite the overlay.
-- BODY beat-by-beat, each beat with its b-roll / shot direction.
-- PAYOFF — the hook's promise delivered (no clickbait without payoff).
-- CTA — tied to {{CTA_PRIMARY}}.
-- CAPTION — first-line hook + body + CTA.
-- HASHTAGS — a set sized per the S5 audio/hashtag findings.
-- AUDIO — specific sound or "original voiceover".
-- TARGET LENGTH — seconds, per the S5 sweet spot.
+COVERAGE RULE (mandatory): write ONE script for EVERY slot in the s6 calendar — if s6 has N slots,
+output N scripts, numbered to match the calendar. Do NOT output "a few flagship scripts" or stop early.
+End the step with a COVERAGE CHECK line: "scripts written X / calendar slots N". If X < N, STOP and name
+the unscripted slots — a partial set is REJECTED.
 
-QUALITY GATES (state a verdict for each, on each script — a bare "pass" is NOT accepted; quote the
-evidence asked for):
-- SWIPE TEST: would EACH of the 3 channels independently stop the scroll? (visual / verbal / overlay)
-- OVERLAY ≠ VERBAL: quote the SPOKEN line and the OVERLAY line side by side so the distinction is
-  auditable; reject & rewrite if they say the same thing.
-- ACCOUNT-SWAP TEST: could a competitor post this unchanged? To PASS, name the specific owned proof
-  point used (from the operator notes or s1-baseline). "Added personality" with no concrete proof is a
-  FAIL; if no proof is on file, flag the script "needs client proof" — do not invent one.
-- SHARE TRIGGER: name the one §2.3 trigger and why a human forwards it.
-- TRACEABILITY: cite the S4 card ID / S5 transplant each script derives from. If a cited card was
-  marked UNAVAILABLE/low-confidence in S4, the script INHERITS that flag and is labelled SPECULATIVE —
-  do not present it as decode-backed. No invented-from-nothing scripts.
+FORMAT — write each reel as a TWO-COLUMN SHOOTING SCRIPT (a markdown table) so a shooter can read it at
+a glance. The columns separate what the viewer HEARS from what they SEE and READ:
+
+  ### Reel <n> — "<title>" · <REACH/NURTURE/CONVERT> · <length>s · <audio>
+  | TIME | AUDIO — what they HEAR | VISUAL & TEXT — what they SEE & READ |
+  |---|---|---|
+  | 0–2s | <spoken hook, exact first words ≤2s — or "— no voiceover — (trending audio)"> | <first-frame / first-motion visual> · OVERLAY: "<on-screen text ≤8 words>" |
+  | <t> | <spoken VO for this beat> | <shot / b-roll direction> · OVERLAY: "<text card, if any>" |
+  | <t> | <CTA, spoken — tied to {{CTA_PRIMARY}}> | <end-card visual> · OVERLAY: "<CTA text>" |
+
+  Table rules:
+  - Beat-by-beat rows whose timecodes sum to the target length (per the S5 sweet spot).
+  - AUDIO column = the spoken script ONLY (voiceover / dialogue). For a silent or trending-audio reel,
+    write "— no voiceover — (trending audio)" in every AUDIO cell and carry the message as on-screen
+    TEXT in the right column.
+  - VISUAL column = the camera/shot direction AND the verbatim on-screen text, the text prefixed
+    "OVERLAY:". Keep visual and overlay together here; keep them OUT of the AUDIO column.
+  - The first row IS the hook and MUST carry all three hook channels: the SPOKEN hook (AUDIO cell), the
+    VISUAL hook and the OVERLAY hook (right cell, overlay ≤8 words). The OVERLAY must be a SECOND message,
+    not a transcript of the spoken hook — if they say the same thing, rewrite the overlay.
+
+Directly UNDER each table, a FOOTER of labelled lines:
+- HOOK: the one thing that stops the scroll in second 1, and which channel carries it.
+- CALL TO ACTION: tied to {{CTA_PRIMARY}}.
+- WHY IT'LL GO VIRAL: the decoded mechanism — cite the S4 card ID / S5 transplant it derives from and the
+  §2.3 share trigger.
+- CAPTION: first-line hook + body + CTA. · HASHTAGS: a set sized per the S5 findings. · AUDIO + LENGTH.
+
+QUALITY GATES — run all of these internally on each script and report them COMPACTLY (one line per
+script; a bare "pass" is NOT accepted — keep the evidence):
+- SWIPE: would EACH of the 3 channels independently stop the scroll? (visual / verbal / overlay)
+- OVERLAY ≠ VERBAL: the overlay text must differ from the spoken hook (if identical, rewrite).
+- ACCOUNT-SWAP: name the specific owned proof point used (operator notes / s1-baseline). No proof on
+  file → flag the script "needs client proof" — never invent one.
+- SHARE TRIGGER: the one §2.3 trigger and why a human forwards it.
+- TRACEABILITY: the S4 card ID / S5 transplant it derives from. A card flagged UNAVAILABLE/low-confidence
+  in S4 makes the script SPECULATIVE — label it so; no invented-from-nothing scripts.
 - NO-GO: quote the script's strongest claim and explain why it does NOT cross into {{NO_GO_TOPICS}}.
 
-OUTPUT: the winning scripts with their gate verdicts. VAULT SAVE: full scripts + HANDOFF SUMMARY
-(≤30 lines: one line per script — its 3-hook gist + source card + share trigger) to
-"{{VAULT_FOLDER}}/s7-scripts.md". After saving, echo the exact path + link and confirm no duplicate
-folder was created.
+OUTPUT: the N two-column scripts (table + footer + one-line gate verdict each), then the COVERAGE CHECK.
+VAULT SAVE: full scripts + HANDOFF SUMMARY (≤30 lines: one line per script — its hook gist + source card
++ share trigger) to "{{VAULT_FOLDER}}/s7-scripts.md". After saving, echo the exact path + link and
+confirm no duplicate folder was created.
 No Drive? Output the file in a code block to paste-save.</script>
 <script type="text/plain" class="raw-prompt" data-step="S8">You are producing (a) a client-facing showcase report and (b) the monthly learning-loop re-run for
 {{CLIENT_NAME}}. Part (a) is paste-ready for the Beautifier. Part (b) makes next month smarter.
 
 VAULT LOAD (FIRST): load s1 through s7 from "{{VAULT_FOLDER}}/". LOAD RECEIPT: print a 7-file checklist
-(s1…s7, found y/n + last-modified). If ANY is missing, STOP and list which — do not assemble a partial
-showcase from memory.
+by EXACT filename — s1-baseline, s2-discovery, s3-outliers, s4-decode, s5-patterns, s6-calendar,
+s7-scripts (found y/n + last-modified). If ANY is missing, STOP and list which — do not assemble a
+partial showcase from memory. s2-discovery and s3-outliers are NON-NEGOTIABLE: the report's research
+section (funnel + accounts + origins) cannot be honestly written without them, so if either is absent,
+STOP and ask the operator to (re-)run that step rather than papering over the gap.
 
-PART A — SHOWCASE REPORT (markdown, paste into the Beautifier):
+PART A — SHOWCASE REPORT (markdown, paste into the Beautifier). It must SHOW THE RESEARCH, not just the
+output — include all of these sections:
 - Cover: {{CLIENT_NAME}} · {{NICHE}} · prepared {{CURRENT_DATE}}.
-- Research depth: funnel counts (from s2), reels decoded (from s4) — show the work.
-- Niche insights: saturated vs absent formats, hook bank highlights, THE GAP (from s5).
-- Strategy: the 40/40/20 logic + the 30-day calendar table (from s6).
-- A few flagship scripts (from s7) as examples.
+- HOW WE RESEARCHED IT: the funnel counts (from s2 — candidates → kills → survivors), how many accounts
+  were deep-scraped and how many reels were fully decoded (from s3/s4), and the THREE-LAYER DECODE METHOD
+  naming the tool used per layer (visual / on-screen-text / audio, from s4). Make the rigor visible.
+- ACCOUNTS WE DECODED: a table of each decoded account WITH ITS ORIGIN (geo + language, from s2/s4) and
+  one line on why it was relevant / how its format transplants. If s5 stamped a GEO/LANGUAGE SKEW (e.g.
+  every winner from one region), state it plainly here — never hide a thin or skewed sample.
+- NICHE INSIGHTS: saturated vs absent formats, hook-bank highlights, THE GAP (from s5).
+- STRATEGY: the 40/40/20 logic + the FULL 30-day calendar table (from s6).
+- THE SCRIPTS: include EVERY script from s7, each in its two-column shooting-script format (table +
+  Hook/CTA/Why-viral footer) — one script per calendar slot, matching the calendar 1:1. Do NOT reduce to
+  "a few flagship examples". Print a COVERAGE line: "scripts shown X / calendar slots N".
 - Keep claims evidence-bound; for each headline number cite which vault file it came from. A count that
-  was flagged LOW-CONFIDENCE / UNAVAILABLE / PARTIAL upstream must NOT appear as a clean stat here.
+  was flagged LOW-CONFIDENCE / UNAVAILABLE / PARTIAL / GEO-SKEWED upstream must NOT appear as a clean
+  stat here — carry the flag through to the client report.
 
 PART B — LEARNING LOOP (monthly re-run):
 The learning loop compares the client's OWN posts against their S1 baseline each month. It only runs
