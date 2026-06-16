@@ -13,14 +13,14 @@ const reBlk=/<script type="text\/plain" class="raw-prompt" data-step="(S\d)">([\
 while(m=reBlk.exec(html)) RAW[m[1]]=m[2];
 const appdata=(html.match(/<script id="appdata">([\s\S]*?)<\/script>/)||[])[1];
 const engine =(html.match(/<script id="engine">([\s\S]*?)<\/script>/)||[])[1];
-ok('extracted 8 templates', Object.keys(RAW).length===8, Object.keys(RAW).join(','));
+ok('extracted 5 templates', Object.keys(RAW).length===5, Object.keys(RAW).join(','));
 ok('extracted appdata + engine', !!appdata && !!engine);
 
 // --- eval the shipped engine ---
 const api = new Function(appdata+'\n'+engine+'\n;return {reconcile,buildValues,generatePrompt,preflight,validate,renderMarkdown,FIELD_KEYS,DERIVED_KEYS,TEST_CLIENT};')();
 
 // --- parity vs PROMPTS.md ---
-for(let n=1;n<=8;n++){const s='S'+n;
+for(let n=1;n<=5;n++){const s='S'+n;
   const mm=md.match(new RegExp('^##\\s+'+s+'\\b[\\s\\S]*?\\n```\\n([\\s\\S]*?)\\n```','m'));
   ok(s+' matches PROMPTS.md byte-for-byte', mm && mm[1]===RAW[s]);
 }
@@ -30,10 +30,10 @@ const r=api.reconcile(RAW);
 ok('reconciler: 0 orphans', r.orphans.length===0, r.orphans.join(','));
 ok('reconciler: 0 dead fields', r.deadKeys.length===0, r.deadKeys.join(','));
 
-// --- generate all 8 with TEST_CLIENT, pre-flight each ---
+// --- generate all 5 with TEST_CLIENT, pre-flight each ---
 const vals=api.buildValues(api.TEST_CLIENT);
 let leftover=[];
-for(const s of ['S1','S2','S3','S4','S5','S6','S7','S8']){
+for(const s of ['S1','S2','S3','S4','S5']){
   const t=api.generatePrompt(s, vals, RAW);
   const pf=api.preflight(t);
   if(pf.length) leftover.push(s+':'+pf.join(' '));
@@ -41,36 +41,40 @@ for(const s of ['S1','S2','S3','S4','S5','S6','S7','S8']){
 }
 ok('zero leftover {{ }} / [[ ]] in any prompt', leftover.length===0, leftover.join(' | '));
 
-// COMPETITOR_HANDLES empty → its [[IF]] blocks stripped; confirm no stray "Force-include" line in S2
-const s2=api.generatePrompt('S2', vals, RAW);
+// generate each step once for content assertions
+const s1=api.generatePrompt('S1', vals, RAW), s2=api.generatePrompt('S2', vals, RAW),
+      s3=api.generatePrompt('S3', vals, RAW), s4=api.generatePrompt('S4', vals, RAW),
+      s5=api.generatePrompt('S5', vals, RAW);
+
+// S2 — Discover & Rank: discovery legs + origin capture + outlier ranking + cost gate
 ok('S2 strips empty COMPETITOR_HANDLES leg', !/Force-include these competitor handles/.test(s2));
 ok('S2 keeps mandatory hashtag leg', /Leg 2 — HASHTAGS \(always run/.test(s2));
+ok('S2 records account origin (geo/language)', /RECORD its ORIGIN/.test(s2));
+ok('S2 ranks with an origin column', /origin \(geo\/lang\)/.test(s2));
+ok('S2 carries the scrape cost guardrail', /COST GUARDRAIL/.test(s2));
 
-// optional ADDITIONAL_NOTES kept where present
-const s6=api.generatePrompt('S6', vals, RAW), s7=api.generatePrompt('S7', vals, RAW);
-ok('S6 includes operator notes when present', /Operator notes \(proof, preferred pillars/.test(s6));
-ok('S7 includes operator notes when present', /Operator notes \(proof, voice, constraints\)/.test(s7));
-ok('S1 keeps client scrape when handle present', /apify\/instagram-reel-scraper/.test(api.generatePrompt('S1', vals, RAW)));
-// NEW/THIN ACCOUNT: empty handle strips the client scrape + learning-loop scrape, stays placeholder-clean
+// S3 — Decode & Synthesize: per-card origin stamp + geo/language skew guard
+ok('S3 stamps origin per decoded card', /ORIGIN \(geo\/language/.test(s3));
+ok('S3 runs the geo/language skew check', /GEO\/LANGUAGE SKEW CHECK/.test(s3));
+
+// S4 — Plan & Script: operator notes + full coverage + two-column shooting-script format
+ok('S4 includes operator notes when present', /Operator notes \(proof, preferred pillars, voice, constraints/.test(s4));
+ok('S4 mandates a script for every calendar slot', /COVERAGE RULE \(mandatory\)/.test(s4) && /COVERAGE CHECK/.test(s4));
+ok('S4 specifies the two-column shooting-script format', /TWO-COLUMN SHOOTING SCRIPT/.test(s4) && /AUDIO — what they HEAR/.test(s4) && /VISUAL & TEXT — what they SEE & READ/.test(s4));
+ok("S4 footer carries Hook / CTA / Why-viral", /WHY IT'LL GO VIRAL/.test(s4));
+
+// S1 — client scrape toggles on the optional handle
+ok('S1 keeps client scrape when handle present', /apify\/instagram-reel-scraper/.test(s1));
 const valsNH=api.buildValues(Object.assign({},api.TEST_CLIENT,{CLIENT_HANDLE:''}));
 const s1nh=api.generatePrompt('S1', valsNH, RAW);
 ok('S1 strips client scrape when no handle', !/apify\/instagram-reel-scraper/.test(s1nh) && api.preflight(s1nh).length===0, api.preflight(s1nh).join(' '));
-const s8nh=api.generatePrompt('S8', valsNH, RAW);
-ok('S8 learning-loop guards no-handle', /Learning loop not\s+yet active/.test(s8nh) && !/"resultsLimit": 30/.test(s8nh) && api.preflight(s8nh).length===0);
-ok('no-handle client still passes validation', Object.keys(api.validate(Object.assign({},api.TEST_CLIENT,{CLIENT_HANDLE:''}))).length===0);
 
-// ---- process-refinement guards (two-column scripts, all-slots coverage, origin/geo, skew, S8 research) ----
-const s3=api.generatePrompt('S3', vals, RAW), s4=api.generatePrompt('S4', vals, RAW),
-      s5=api.generatePrompt('S5', vals, RAW), s8=api.generatePrompt('S8', vals, RAW);
-ok('S7 mandates a script for every calendar slot', /COVERAGE RULE \(mandatory\)/.test(s7) && /COVERAGE CHECK/.test(s7));
-ok('S7 specifies the two-column shooting-script format', /TWO-COLUMN SHOOTING SCRIPT/.test(s7) && /AUDIO — what they HEAR/.test(s7) && /VISUAL & TEXT — what they SEE & READ/.test(s7));
-ok('S7 footer carries Hook / CTA / Why-viral', /WHY IT'LL GO VIRAL/.test(s7));
-ok('S2 records account origin (geo/language)', /RECORD its ORIGIN/.test(s2));
-ok('S3 carries an origin column', /origin \(geo\/lang\)/.test(s3));
-ok('S4 stamps origin per card', /ORIGIN \(geo\/language/.test(s4));
-ok('S5 runs the geo/language skew check', /GEO\/LANGUAGE SKEW CHECK/.test(s5));
-ok('S8 hard-requires s2-discovery + s3-outliers', /s2-discovery and s3-outliers are NON-NEGOTIABLE/.test(s8));
-ok('S8 includes every script (no flagship-only)', /include EVERY script from s7/.test(s8) && /ACCOUNTS WE DECODED/.test(s8));
+// S5 — Showcase + Learning Loop: research depth, all scripts, hard-require s2/s3, no-handle guard
+ok('S5 hard-requires s2-discovery + s3-outliers', /s2-discovery and s3-outliers are NON-NEGOTIABLE/.test(s5));
+ok('S5 includes every script (no flagship-only)', /include EVERY script from s7/.test(s5) && /ACCOUNTS WE DECODED/.test(s5));
+const s5nh=api.generatePrompt('S5', valsNH, RAW);
+ok('S5 learning-loop guards no-handle', /Learning loop not\s+yet active/.test(s5nh) && !/"resultsLimit": 30/.test(s5nh) && api.preflight(s5nh).length===0);
+ok('no-handle client still passes validation', Object.keys(api.validate(Object.assign({},api.TEST_CLIENT,{CLIENT_HANDLE:''}))).length===0);
 
 // validation fires on blank
 const blank=api.validate({});

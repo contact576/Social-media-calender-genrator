@@ -157,10 +157,16 @@ based on audio + thumbnail only") instead of silently pretending.
 
 ---
 
-## 5. The prompt chain (S1–S8) — what the dashboard generates
+## 5. The decode chain — what the dashboard generates (8 logical stages, delivered as 5 prompts)
 
-Mirror of the proven P1–P11 architecture: each step = one copy-paste prompt; terse in-chat
-outputs; Research Vault save/load (§6); steps runnable in fresh chats.
+The methodology has eight logical stages (below). The shipped dashboard **fuses the tightly-coupled
+ones into five copy-paste prompts** so the operator pastes fewer times — no stage is dropped, and each
+fused prompt still saves the same distinct vault files:
+**S1** = stage 1 (`s1-baseline`); **S2 (Discover & Rank)** = stages 2+3 (`s2-discovery`+`s3-outliers`);
+**S3 (Decode & Synthesize)** = stages 4+5 (`s4-decode`+`s5-patterns`);
+**S4 (Plan & Script)** = stages 6+7 (`s6-calendar`+`s7-scripts`);
+**S5 (Showcase + Learning Loop)** = stage 8 (`s8-report`+`s8b-learning-loop`).
+Terse in-chat outputs; Research Vault save/load (§6); steps runnable in fresh chats.
 
 - **S1 — Client Brand & Baseline Decode.** Scrape the CLIENT's own account (last 50-90 posts):
   median plays (the baseline for all future outlier math), engagement rate, top-5/bottom-5 with

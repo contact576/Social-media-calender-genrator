@@ -1,7 +1,7 @@
 # SMM Virality Decoder
 
-A **single-file, keyless web app** (`index.html`) that turns a client intake form into eight
-copy-paste prompts (S1–S8). An operator runs those prompts in a Claude chat that has the
+A **single-file, keyless web app** (`index.html`) that turns a client intake form into five
+copy-paste prompts (S1–S5). An operator runs those prompts in a Claude chat that has the
 **Apify + Higgsfield + Google Drive** connectors; the chat does the scraping/decoding and saves results
 to a Google Drive "vault". The dashboard itself makes **no network calls and holds no API keys** — it
 only generates text and renders the final report.
@@ -17,13 +17,15 @@ predict whether a not-yet-made video will go viral; it writes from what already 
 1. **Open the dashboard** (the live link, or `index.html` in any browser).
 2. **Intake form** — fill every field marked with a red `*`. Hover the help text under each field for an
    example. The Google Drive folder name auto-fills from the client name.
-3. Press **Generate prompts →**. The **Prompts** tab fills with S1–S8.
+3. Press **Generate prompts →**. The **Prompts** tab fills with S1–S5.
 4. Open the **connected Claude chat** (the one your admin set up with Apify + Higgsfield + Google Drive).
    Pasting these into regular ChatGPT or plain Claude will **not** work.
-5. **Run them in order, S1 → S8.** Copy one (the "Copy step N" button), paste it, let it finish, and let
-   it **save to Drive**, then do the next. Don't skip ahead — each step loads the previous step's file.
-6. Keep **S3 and S4 in one sitting** — Instagram video links expire within hours.
-7. When you reach **S8**, copy its report, open the **Beautifier** tab, paste it, and press
+5. **Run them in order, S1 → S5.** Copy one (the "Copy step N" button), paste it, let it finish, and let
+   it **save to Drive**, then do the next. Don't skip ahead — each step loads the previous step's files.
+   (S2, S3 and S4 each save **two** vault files — that's expected.)
+6. Run **S2 and S3 in one sitting** — S2 grabs the reels and S3 decodes them, and Instagram video links
+   expire within hours.
+7. When you reach **S5**, copy its report, open the **Beautifier** tab, paste it, and press
    **Render report → Print / Save as PDF** for the client-ready document.
 
 That's it. The "System check" tab is for developers; you only touch it if a red banner asks you to.
@@ -68,7 +70,7 @@ put the URL there (one line) — the note becomes a clickable button. Until then
 
 ## How to change a prompt (developers)
 
-The eight templates are the single source of truth in **`PROMPTS.md`**. Edit there, then run
+The five templates are the single source of truth in **`PROMPTS.md`**. Edit there, then run
 `python3 inject_prompts.py` to re-embed them into `index.html`. Never hand-edit the `raw-prompt` blocks
 in `index.html`. Verify with `node selftest.mjs` (engine + parity + reconciler, no dependencies).
 See `CLAUDE.md` for the full architecture.
@@ -86,4 +88,4 @@ default branch. To redeploy manually, drag `index.html` onto vercel.com or run `
   `virality_predictor` before publishing (it scores a *finished video*, and spends credits — verify cost
   first). Deliberately left out of v1; the owner's goal is decode-then-write, not grade-before-post.
 - Auto-posting / scheduling · TikTok + YouTube Shorts as leading indicators · comment-sentiment mining ·
-  multi-client trend dashboard · the monthly **Learning Loop** as a one-click re-run (S8b per client).
+  multi-client trend dashboard · the monthly **Learning Loop** as a one-click re-run (S5 Part B / s8b per client).

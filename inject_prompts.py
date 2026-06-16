@@ -2,7 +2,7 @@ import re, sys, pathlib
 root = pathlib.Path('/home/user/Social-media-calender-genrator')
 md = (root/'PROMPTS.md').read_text(encoding='utf-8')
 html = (root/'index.html').read_text(encoding='utf-8')
-for n in range(1,9):
+for n in range(1,6):
     step=f'S{n}'
     m = re.search(r'^##\s+'+step+r'\b.*?\n```\n(.*?)\n```', md, re.S|re.M)
     if not m: print(f'ERROR: no code block for {step}'); sys.exit(1)

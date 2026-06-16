@@ -17,7 +17,7 @@
 
 ## 1. File structure
 ```
-index.html        # the whole tool: Intake tab · Prompt-Chain tab (S1–S8) · Beautifier tab · Diagnostics
+index.html        # the whole tool: Intake tab · Prompt-Chain tab (S1–S5) · Beautifier tab · Diagnostics
 README.md         # operator quick-start, troubleshooting, costs, v2 roadmap (Phase 7)
 BLUEPRINT.md      # methodology (exists)
 PROJECT_BRIEF.md  # pilot facts (exists)
@@ -47,9 +47,9 @@ is the single source of truth; templates may only reference keys in `FIELD_KEYS`
 | 13 | Known competitor handles | `{{COMPETITOR_HANDLES}}` | ⬜ | each line a valid handle (force-include seeds) |
 | 14 | No-go topics (hard bans) | `{{NO_GO_TOPICS}}` | ✅ | non-empty |
 | 15 | Posting capacity | `{{POSTING_CAPACITY}}` | ✅ | non-empty (reels/wk + who films) |
-| 16 | Production modes | `{{PRODUCTION_MODES}}` | ✅ | non-empty (phone / AI-avatar / designer) — feeds S6's mandatory effort tag |
+| 16 | Production modes | `{{PRODUCTION_MODES}}` | ✅ | non-empty (phone / AI-avatar / designer) — feeds S4's mandatory effort tag |
 | 17 | Primary CTA | `{{CTA_PRIMARY}}` | ✅ | non-empty |
-| 18 | Additional notes (catch-all) | `{{ADDITIONAL_NOTES}}` | ⬜ | — (brand voice, proof, pillars, constraints — consumed by S1/S6/S7) |
+| 18 | Additional notes (catch-all) | `{{ADDITIONAL_NOTES}}` | ⬜ | — (brand voice, proof, pillars, constraints — consumed by S1/S4) |
 | 19 | Vault folder | `{{VAULT_FOLDER}}` | ✅ | default `<CLIENT_NAME> — SMM Virality Vault` (auto-named from client name) |
 
 **Every field has a downstream consumer** — see the §4 step inputs; the reconciler (§3) flags any field
@@ -61,7 +61,7 @@ next Monday on/after it). Earlier-removed: `BASELINE_WINDOW` (hard-coded "50–9
 **New/thin-account handling (owner-directed):** `CLIENT_HANDLE` is **optional** — new clients often have
 no account yet. S1 branches on it: *ESTABLISHED* (handle + ≥10 reels) computes the baseline median;
 *NEW/THIN* (no handle, or <10 reels) sets baseline = N/A and infers a RECOMMENDED voice. Discovery/decode/
-scripts (S2–S7) never use the client's own content, so they are unaffected. S8's learning loop is guarded
+scripts (S2–S4) never use the client's own content, so they are unaffected. S5's learning loop is guarded
 by `[[IF CLIENT_HANDLE]]` and prints "not yet active" when there is no account.
 
 `DERIVED_KEYS` (computed, never user-entered, must be known to the reconciler so they aren't flagged
@@ -82,7 +82,7 @@ reconciler and pre-flight both understand `[[IF]]`/`[[ENDIF]]`.
   `[[`, `]]`. If found → the Copy button is disabled and the leftover token is shown. Guarantees zero
   injectable placeholders ever reach the operator.
 - **Diagnostics self-test button.** Loads a built-in `TEST_CLIENT` fixture (PPC Guru data from the
-  brief), generates S1–S8, and asserts: (a) reconciler clean, (b) all 8 prompts pass pre-flight,
+  brief), generates S1–S5, and asserts: (a) reconciler clean, (b) all 5 prompts pass pre-flight,
   (c) all 8 non-empty, (d) every Copy button wired, (e) required-field validation fires on a blank
   fixture. Prints PASS/FAIL per check. This is the "is the tool healthy?" button for the operator.
 
@@ -107,7 +107,7 @@ silently. Required safeguards, each surfaced where it bites:
   re-run." (Whisper is already rented; this covers any new actor.)
 - **Nested-array projection (§3.2 trap #3):** S2/S3/S4 prompts instruct `get-dataset-items` to **fetch
   full items and `omit` bulky blocks**, never `fields=` on nested arrays (silently drops them).
-- **Vault-save verification:** every S3–S8 LOAD header tells the operator to **confirm the prior file
+- **Vault-save verification:** every S2–S5 LOAD header tells the operator to **confirm the prior file
   exists in the vault before proceeding**; if the Drive connector is absent, the SAVE footer's manual
   paste-and-save instructions (`[[IF no Drive]]`) are followed instead. (Reconciler/pre-flight guard
   placeholders, not vault contents — this human check covers the gap.)
@@ -115,89 +115,65 @@ silently. Required safeguards, each surfaced where it bites:
 These live in the **prompt text + a collapsible "Before you run" help panel per step** (Phase 4 build),
 and are exactly what the Phase-3 operational-trap auditor and the usability subagent verify.
 
-## 4. The S1–S8 prompt chain (design spec; full text is Phase 3)
-Every step: terse in-chat output + a **vault SAVE footer**; S3–S8 also begin with a **vault LOAD
-header**. Actor names/fields are the ones **proven in `VALIDATION_REPORT.md`**.
+## 4. The S1–S5 prompt chain (8 logical stages fused into 5 prompts; full text in `PROMPTS.md`)
+Every step: terse in-chat output + a **vault SAVE footer** (the three merged steps save TWO files each);
+S2–S5 begin with a **vault LOAD header**. Actor names/fields are the ones **proven in
+`VALIDATION_REPORT.md`**. Step numbers (5) and vault-file numbers (s1–s8) intentionally differ — see §5.
 
 - **S1 — Client Baseline.** In: `CLIENT_HANDLE?, CLIENT_WEBSITE?, NICHE, ICP, SERVICES, GEO_PRIMARY,
   LANGUAGE_PRIMARY, NO_GO_TOPICS, ADDITIONAL_NOTES?`. **Branches on MODE:** *ESTABLISHED* (handle present
-  + ≥10 reels with plays) → MCP `apify/instagram-reel-scraper` (`username=[CLIENT_HANDLE]`,
-  `resultsLimit=50–90` hard-coded, `skipPinnedPosts=true`) → **baseline median plays**, engagement, top-5/
-  bottom-5 + why, formats, cadence, follower quality, voice extracted from captions; *NEW/THIN* (no handle
-  or <10 reels) → baseline = "N/A — new/thin account", infer a RECOMMENDED voice from niche/services/notes.
-  The scrape is wrapped in `[[IF CLIENT_HANDLE]]`. SAVE `s1-baseline.md` + HANDOFF (≤30 lines, incl. MODE).
-- **S2 — Niche Discovery (keyword-first).** In: `NICHE_KEYWORDS, NICHE_HASHTAGS, ADJACENT_KEYWORDS,
-  COMPETITOR_HANDLES?, GEO_*, LANGUAGE_*`. MCP: `data-slayer/instagram-search-reels` (one run per
-  keyword, `maxPages` cap), optional hashtag scraper, `[[IF COMPETITOR_HANDLES]]` force-include via
-  reel-scraper. Out: candidate pool → mechanical kills (inactive/aggregator/wrong-geo/botted/guru) →
-  classify **EXACT/ADJACENT/MACRO**, **record each survivor's ORIGIN (geo + language)** → **funnel counts
-  reported**. Caps: ≤10 keywords, `maxPages` 1–2 (~12–24 reels each), pool ≤~150. Fallback: a keyword
-  returning 0 is reported, not fatal. SAVE `s2-discovery.md` (**required by S8** — origins travel with
-  the accounts so S5 can catch a geo/language skew).
-- **S3 — Outlier Harvest.** LOAD `s2`. MCP: `apify/instagram-reel-scraper` on **each surfaced winner's
-  OWN account** (`resultsLimit≥30, skipPinnedPosts=true`) → account median → `outlier =
-  plays ÷ account_median` (fallback `plays ÷ followers`), **report actual n** (profiles paginate
-  short). Out: ranked top 20–25 (≥15 EXACT, ≥5 ADJACENT, ≤3 MACRO), scores/links/plays/medians,
-  **an origin (geo/lang) column carried from S2**, **consistency-winner flags**. Thresholds ≥5× / ≥20×.
-  SAVE `s3-outliers.md` (**required by S8**).
-- **S4 — Deep Decode (3 layers).** LOAD `s3`. **Same-session** (CDN URLs expire — see §3a). VERBAL:
-  `donjuan_mime/audio-video-to-text` `{ source_url: <the reel-scraper `videoUrl`>, model:"small" }`
-  (input key is **`source_url`**, fed by the scraper's `videoUrl` output — proven in VALIDATION §1c);
-  non-English/music reel → Higgsfield
-  `video_analysis` (import CDN URL via `media_import_url` first) which transcribes+translates; **state
-  which engine, never fabricate**. VISUAL (top 10–12): Higgsfield `video_analysis` (scene/shot/audio,
-  primary) + `grizzlygriff/video-llm-analyzer` (`gemini`, `framesToExtract:4–6`, `maxChargeUsd:0.1`) for
-  **overlay text + first frame**. PACKAGING from reel-scraper fields (caption/hashtags/`musicInfo`/
-  duration/timestamp). Out: one card/reel, taxonomy tags (§2.3+§2.4) **+ ORIGIN (geo/language)**,
-  **card IDs** for traceability. Caps: Whisper top 20–25, visual top 10–12. Fallbacks printed. SAVE
-  `s4-decode.md`.
-- **S5 — Pattern Synthesis & The Gap.** LOAD `s1–s4`. **GEO/LANGUAGE SKEW CHECK first** — tally card
-  origins; if winners cluster in one geo/language (or a non-client sub-niche), STAMP `GEO-SKEWED` and
-  carry it into THE GAP + HANDOFF (recommend a broader, geo-balanced re-run). Out: hook bank
-  (**verbal/visual/overlay separated**), format distribution (saturated vs absent), length sweet spot,
-  audio strategy, share-trigger frequency, **transplant map** (adjacent format × client niche),
-  **THE GAP**. SAVE `s5-patterns.md`.
-- **S6 — Strategy + 30-Day Calendar.** LOAD `s1,s5`. In: `POSTING_CAPACITY, PRODUCTION_MODES,
-  CTA_PRIMARY, ADDITIONAL_NOTES?` + `CURRENT_DATE` (calendar starts the next Monday on/after it). The
-  prompt **derives 3–5 content pillars** from services/ICP/S5 patterns; **CONVERT** slots use any proof
-  in `ADDITIONAL_NOTES`, else are flagged "needs a proof asset". Out: **40/40/20** calendar; per slot
-  date/pillar/format/hook concept/topic/audio/CTA/production-effort tag. SAVE `s6-calendar.md`.
-- **S7 — Viral Scripts.** LOAD `s4,s5,s6`. In (intake): `ADDITIONAL_NOTES?` (proof/voice) + the voice
-  from `s1-baseline`. **COVERAGE RULE: one script per calendar slot — N slots → N scripts; ends with a
-  COVERAGE CHECK (X/N); a partial set is rejected.** Out per reel: a **two-column shooting script** as a
-  markdown table — `TIME | AUDIO (what they HEAR) | VISUAL & TEXT (what they SEE & READ)`, beat-by-beat,
-  the first row carrying all three hook channels; then a footer (**HOOK · CALL TO ACTION · WHY IT'LL GO
-  VIRAL** + caption/hashtags/audio/length). **Quality gates** (compact, one line/script): swipe per
-  channel; **overlay ≠ verbal** (BLUEPRINT §2.1); account-swap (inject proof from notes/s1, else flag
-  "needs client proof"); share-trigger; **S4 card-ID traceability**; no-go. SAVE `s7-scripts.md`.
-- **S8 — Showcase Report + Learning Loop.** LOAD `s1–s7` (checklist by exact filename; **s2-discovery +
-  s3-outliers are non-negotiable** — STOP if missing). (a) client-facing report markdown that **shows the
-  research**: HOW WE RESEARCHED IT (funnel + the 3-layer decode method & tools), ACCOUNTS WE DECODED
-  (with **origin** + any **GEO-SKEW** flag), niche insights, strategy + full calendar, and **THE SCRIPTS
-  — every s7 script in two-column format (1:1 with the calendar, COVERAGE line)** → feeds the Beautifier.
-  (b) **monthly re-run:** scrape client's own last-30-days, outlier-score vs S1 baseline,
-  **keep/kill/double-down**, feed next month's S6. SAVE `s8-report.md` + `s8b-learning-loop.md`.
+  + ≥10 reels) → MCP `apify/instagram-reel-scraper` → **baseline median plays**, engagement, top/bottom-5,
+  formats, cadence, follower quality, voice; *NEW/THIN* → baseline "N/A", RECOMMENDED voice inferred. The
+  scrape is wrapped in `[[IF CLIENT_HANDLE]]`. SAVE `s1-baseline.md`.
+- **S2 — Discover & Rank** *(fuses old discovery + outlier harvest)*. LOAD `s1?`. **PART 1 (discovery):**
+  MCP `data-slayer/instagram-search-reels` per keyword + a mandatory hashtag leg + an adjacent leg
+  (`[[IF COMPETITOR_HANDLES]]` seed leg) → candidate pool → mechanical kills
+  (inactive/aggregator/wrong-geo/botted/guru) → classify **EXACT/ADJACENT/MACRO** + **record each
+  survivor's ORIGIN (geo+language)** → funnel counts. **PART 2 (ranking):** `apify/instagram-reel-scraper`
+  on each surfaced winner's OWN account → `outlier = plays ÷ account_median` (≥5×/≥20×), report actual n,
+  consistency-winner flags; select top 20–25 (≥15 EXACT/≥5 ADJACENT/≤3 MACRO). Ranked table carries an
+  **origin (geo/lang) column**. Has a **scrape COST GUARDRAIL**. SAVE `s2-discovery.md` + `s3-outliers.md`.
+- **S3 — Decode & Synthesize** *(fuses old decode + pattern synthesis)*. LOAD `s3-outliers, s2, s1`.
+  **Same-session** (CDN URLs expire — see §3a). **PART 1 (decode, per reel):** VERBAL
+  `donjuan_mime/audio-video-to-text` (`source_url`, `model:small`; non-English → Higgsfield
+  `video_analysis`, transcribes+translates); VISUAL (top 10–12) Higgsfield `video_analysis` +
+  `grizzlygriff/video-llm-analyzer` (overlay text, `framesToExtract 4–6`); OVERLAY + PACKAGING; tag
+  §2.3+§2.4 **+ ORIGIN**, card IDs. **PART 2 (synthesis):** **GEO/LANGUAGE SKEW CHECK** first, then hook
+  bank (verbal/visual/overlay separated), format distribution, length sweet spot, audio strategy, share
+  triggers, transplant map, **THE GAP**. SAVE `s4-decode.md` + `s5-patterns.md`.
+- **S4 — Plan & Script** *(fuses old calendar + scripts)*. LOAD `s1, s4-decode, s5-patterns`. In:
+  `POSTING_CAPACITY, PRODUCTION_MODES, CTA_PRIMARY, NO_GO_TOPICS, ADDITIONAL_NOTES?` + `CURRENT_DATE`.
+  **PART 1 (calendar):** derive 3–5 pillars; **40/40/20** Reach/Nurture/Convert, cadence ≤3/wk, CONVERT
+  slots use proof or flag "needs a proof asset". **PART 2 (scripts):** **COVERAGE RULE — one script per
+  slot, ends with COVERAGE CHECK (X/N)**; each reel a **two-column shooting script**
+  (`TIME | AUDIO (HEAR) | VISUAL & TEXT (SEE & READ)`), first row = all three hooks, footer **HOOK · CTA ·
+  WHY IT'LL GO VIRAL** + caption/hashtags/audio/length; gates (swipe, overlay≠verbal, account-swap,
+  share-trigger, card-ID traceability, no-go). SAVE `s6-calendar.md` + `s7-scripts.md`.
+- **S5 — Showcase Report + Learning Loop** *(old S8)*. LOAD all seven `s1…s7` by exact filename
+  (**s2-discovery + s3-outliers non-negotiable** — STOP if missing). (a) client report that **shows the
+  research**: HOW WE RESEARCHED IT (funnel + 3-layer decode method & tools), ACCOUNTS WE DECODED (with
+  **origin** + any GEO-SKEW flag), niche insights, strategy + full calendar, **every s7 script in
+  two-column format (1:1, COVERAGE line)** → feeds the Beautifier. (b) **monthly re-run:** scrape client's
+  last-30-days, outlier-score vs S1 baseline, keep/kill/double-down, feed next month's S4. SAVE
+  `s8-report.md` + `s8b-learning-loop.md`.
 
 ## 5. Research Vault map + load matrix
 `SMM Virality Vault / <CLIENT> /` → `s1-baseline.md · s2-discovery.md · s3-outliers.md · s4-decode.md ·
-s5-patterns.md · s6-calendar.md · s7-scripts.md · s8-report.md · s8b-learning-loop.md`
+s5-patterns.md · s6-calendar.md · s7-scripts.md · s8-report.md · s8b-learning-loop.md` (9 files from 5 steps).
 
 | Step | LOADs | SAVEs |
 |---|---|---|
-| S1 | — | s1 |
-| S2 | (s1 optional) | s2 |
-| S3 | s2 | s3 |
-| S4 | s3 | s4 |
-| S5 | s1,s2,s3,s4 | s5 |
-| S6 | s1,s5 | s6 |
-| S7 | s4,s5,s6 | s7 |
-| S8 | s1–s7 | s8, s8b |
+| S1 — Client Baseline | — | s1-baseline |
+| S2 — Discover & Rank | (s1 optional) | s2-discovery, s3-outliers |
+| S3 — Decode & Synthesize | s3-outliers, s2, s1 | s4-decode, s5-patterns |
+| S4 — Plan & Script | s1, s4-decode, s5-patterns | s6-calendar, s7-scripts |
+| S5 — Showcase + Loop | s1…s7 | s8-report, s8b-learning-loop |
 
 Every SAVE footer also prints **manual-save instructions** (`[[IF no Drive]]`) so the chain works even
 without the Drive connector.
 
 ## 6. Beautifier scope (v1)
-- **In:** paste S8 report markdown (also handles S6 calendar / S7 two-column script tables).
+- **In:** paste the S5 report markdown (also handles the S4 calendar / two-column script tables).
 - **Out:** branded HTML — cover, sections, **KPI cards**, **simple inline SVG charts** (funnel counts,
   format-distribution bar, outlier scatter), **calendar table**, **two-column shooting-script tables**
   (`TIME | AUDIO | VISUAL & TEXT`, rendered by the standard table path) + their Hook/CTA/Why footers;
