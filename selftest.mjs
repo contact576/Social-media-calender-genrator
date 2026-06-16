@@ -59,6 +59,19 @@ const s8nh=api.generatePrompt('S8', valsNH, RAW);
 ok('S8 learning-loop guards no-handle', /Learning loop not\s+yet active/.test(s8nh) && !/"resultsLimit": 30/.test(s8nh) && api.preflight(s8nh).length===0);
 ok('no-handle client still passes validation', Object.keys(api.validate(Object.assign({},api.TEST_CLIENT,{CLIENT_HANDLE:''}))).length===0);
 
+// ---- process-refinement guards (two-column scripts, all-slots coverage, origin/geo, skew, S8 research) ----
+const s3=api.generatePrompt('S3', vals, RAW), s4=api.generatePrompt('S4', vals, RAW),
+      s5=api.generatePrompt('S5', vals, RAW), s8=api.generatePrompt('S8', vals, RAW);
+ok('S7 mandates a script for every calendar slot', /COVERAGE RULE \(mandatory\)/.test(s7) && /COVERAGE CHECK/.test(s7));
+ok('S7 specifies the two-column shooting-script format', /TWO-COLUMN SHOOTING SCRIPT/.test(s7) && /AUDIO — what they HEAR/.test(s7) && /VISUAL & TEXT — what they SEE & READ/.test(s7));
+ok('S7 footer carries Hook / CTA / Why-viral', /WHY IT'LL GO VIRAL/.test(s7));
+ok('S2 records account origin (geo/language)', /RECORD its ORIGIN/.test(s2));
+ok('S3 carries an origin column', /origin \(geo\/lang\)/.test(s3));
+ok('S4 stamps origin per card', /ORIGIN \(geo\/language/.test(s4));
+ok('S5 runs the geo/language skew check', /GEO\/LANGUAGE SKEW CHECK/.test(s5));
+ok('S8 hard-requires s2-discovery + s3-outliers', /s2-discovery and s3-outliers are NON-NEGOTIABLE/.test(s8));
+ok('S8 includes every script (no flagship-only)', /include EVERY script from s7/.test(s8) && /ACCOUNTS WE DECODED/.test(s8));
+
 // validation fires on blank
 const blank=api.validate({});
 const expectBlank=api.FIELD_KEYS.filter(f=>f.required && !f.default && f.key!=='VAULT_FOLDER').length;
@@ -87,6 +100,14 @@ const rJs=api.renderMarkdown('```js\nvar x=1;\n```\nafter the block');
 ok('beautifier: ```lang fence pairs correctly', /<pre class="rpt-code">/.test(rJs.html) && /after the block/.test(rJs.html) && rJs.dropped.length===0);
 const rEh=api.renderMarkdown('## \nreal text');
 ok('beautifier: empty heading is not an empty tag, no drop', !/<h2[^>]*><\/h2>/.test(rEh.html) && rEh.dropped.length===0);
+// two-column shooting script (S7/S8 format): h3 + 3-col table + Hook/CTA/Why footer — renders, no drops
+const rScript=api.renderMarkdown(
+  '### Reel 1 — "Same $1,000" · REACH · 35s · original VO\n'+
+  '| TIME | AUDIO — what they HEAR | VISUAL & TEXT — what they SEE & READ |\n'+
+  '|---|---|---|\n'+
+  '| 0–2s | "Same $1,000 — 37 leads vs zero." | Hard split screen. OVERLAY: "Same $1,000. 37 leads vs 0." |\n'+
+  '\n**HOOK:** the split-screen number gap.\n\n**CALL TO ACTION:** Comment STRUCTURE.\n\n**WHY IT’LL GO VIRAL:** transplants the 20.5× scoreboard onto a real result.');
+ok('beautifier: two-column script renders with no drops', rScript.dropped.length===0 && /<table class="rpt-table"/.test(rScript.html) && /WHY/.test(rScript.html), 'dropped '+rScript.dropped.join(','));
 
 console.log('\n'+(fails?('❌ '+fails+' check(s) failed'):'✅ all checks passed'));
 process.exit(fails?1:0);
