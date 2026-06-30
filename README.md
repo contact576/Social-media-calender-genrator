@@ -30,6 +30,18 @@ predict whether a not-yet-made video will go viral; it writes from what already 
 
 That's it. The "System check" tab is for developers; you only touch it if a red banner asks you to.
 
+### Two run modes (toggle at the top of the Intake tab)
+- **Claude chat** (default) — the five-prompt manual flow above.
+- **Claude Code** — fill the same form **plus** the "Auto-run" settings (how many reels, which outputs,
+  the virality pass bar, scrape budget), press **Generate**, and you get **one** prompt. Paste it into a
+  **Claude Code** session that has the Apify + Higgsfield + Drive connectors and it runs the whole pipeline
+  itself — discover → decode → write → **grade every script to ≥90 (≥85 for proof/CONVERT reels)** → produce
+  your chosen outputs, with no copy-pasting between steps. Outputs: a storyboard (8–10 frames written as
+  ready-to-paste **image-generation prompts** for Nano Banana Pro / GPT-Image — no images are generated, so
+  no Higgsfield credits are spent), a designer-ready document, and optional generation prompts. It caps its
+  own Apify spend and never pauses to ask. Feedback ("regrade reel 7", "punch up frame 3") is handled in the
+  same chat.
+
 ---
 
 ## Troubleshooting (the things that actually happen)
