@@ -20,6 +20,25 @@ Scripts are written as **two-column shooting scripts** (TIME | AUDIO | VISUAL & 
 Hook/CTA/Why-viral footer; S2–S4 carry **account origin (geo/language)** and S3 runs a **geo-skew guard**;
 S5's report **shows the research** and includes a script for **every** calendar slot.
 
+## Two run modes (chat vs Claude Code) — SHIPPED
+A toggle on the Intake tab (`localStorage.smm_mode`) picks the mode:
+- **Claude chat** (default) — the five copy-paste prompts S1–S5 (unchanged).
+- **Claude Code** — fill the form + the "Auto-run" settings → **one** orchestrator prompt that runs the
+  whole pipeline autonomously (maker→blind-checker per gate, bounded repair ladder, a virality grader that
+  loops scripts to ≥90 / ≥85 for CONVERT, a self-capping Apify budget) then the **S6** deliverables
+  (8–10-frame storyboard as image-gen *prompts* — no images generated, 0 credits — + designer doc +
+  optional generation prompts). The two autonomous templates live in `PROMPTS.md` (`## ORCHESTRATOR`,
+  `## S6`) and inject into `<script id>` blocks, NOT `raw-prompt`, so `STEPS` stays 5; `reconcile` scopes
+  over `ALLTPL`. The live autonomous run was intentionally left unrun (needs: confirm Claude Code
+  sub-agents inherit the MCP connectors; confirm Higgsfield/Apify tool names + costs at scale).
+
+## Vercel deploy gotcha (read if a merge "won't go live")
+`main` auto-deploys to Vercel, BUT a production deploy is **BLOCKED** when the merge commit's GitHub author
+is `contact576` (not a Vercel project contributor). Commits authored by **"Claude"** deploy fine. So:
+squash-merges (attributed to `contact576`) block; **rebase-merges** (preserve the Claude author) deploy.
+Permanent fix: add `contact576` as a **Vercel team member** (Vercel → Team → Members), or click **Redeploy**
+on the blocked deployment.
+
 ## Notes
 - PPC Guru was the **test fixture** (do not re-run it). Its vault + the branded PDF/`PPC_GURU_FINAL_REPORT.*`
   in the repo are the older one-column 8-step artifacts — illustrative only; the canonical process is the
