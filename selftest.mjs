@@ -13,7 +13,11 @@ const reBlk=/<script type="text\/plain" class="raw-prompt" data-step="(S\d)">([\
 while(m=reBlk.exec(html)) RAW[m[1]]=m[2];
 const appdata=(html.match(/<script id="appdata">([\s\S]*?)<\/script>/)||[])[1];
 const engine =(html.match(/<script id="engine">([\s\S]*?)<\/script>/)||[])[1];
+const ORCH=(html.match(/<script type="text\/plain" id="orchestrator-prompt">([\s\S]*?)<\/script>/)||[])[1]||'';
+const S6  =(html.match(/<script type="text\/plain" id="s6-deliverables">([\s\S]*?)<\/script>/)||[])[1]||'';
+const ALLTPL=Object.assign({}, RAW, {ORCHESTRATOR:ORCH, S6DELIV:S6});  // reconcile scope; STEPS stays from RAW only
 ok('extracted 5 templates', Object.keys(RAW).length===5, Object.keys(RAW).join(','));
+ok('extracted ORCHESTRATOR + S6 autonomous templates', ORCH.length>500 && S6.length>500, 'orch '+ORCH.length+' / s6 '+S6.length);
 ok('extracted appdata + engine', !!appdata && !!engine);
 
 // --- eval the shipped engine ---
@@ -24,9 +28,13 @@ for(let n=1;n<=5;n++){const s='S'+n;
   const mm=md.match(new RegExp('^##\\s+'+s+'\\b[\\s\\S]*?\\n```\\n([\\s\\S]*?)\\n```','m'));
   ok(s+' matches PROMPTS.md byte-for-byte', mm && mm[1]===RAW[s]);
 }
+for(const [hd,got] of [['ORCHESTRATOR',ORCH],['S6',S6]]){
+  const mm=md.match(new RegExp('^##\\s+'+hd+'\\b[\\s\\S]*?\\n```\\n([\\s\\S]*?)\\n```','m'));
+  ok(hd+' matches PROMPTS.md byte-for-byte', !!mm && mm[1]===got, mm? ('len '+mm[1].length+' vs '+got.length) : 'no md block');
+}
 
-// --- reconciler ---
-const r=api.reconcile(RAW);
+// --- reconciler (over chat steps + autonomous templates) ---
+const r=api.reconcile(ALLTPL);
 ok('reconciler: 0 orphans', r.orphans.length===0, r.orphans.join(','));
 ok('reconciler: 0 dead fields', r.deadKeys.length===0, r.deadKeys.join(','));
 
@@ -72,6 +80,15 @@ ok('S1 strips client scrape when no handle', !/apify\/instagram-reel-scraper/.te
 // S5 — Showcase + Learning Loop: research depth, all scripts, hard-require s2/s3, no-handle guard
 ok('S5 hard-requires s2-discovery + s3-outliers', /s2-discovery and s3-outliers are NON-NEGOTIABLE/.test(s5));
 ok('S5 includes every script (no flagship-only)', /include EVERY script from s7/.test(s5) && /ACCOUNTS WE DECODED/.test(s5));
+
+// ---- autonomous "Claude Code" mode (orchestrator + S6 deliverables) ----
+const vorch=api.generatePrompt('ORCHESTRATOR', vals, ALLTPL);
+const vs6  =api.generatePrompt('S6DELIV', vals, ALLTPL);
+ok('ORCHESTRATOR renders clean (no leftover tokens)', api.preflight(vorch).length===0, api.preflight(vorch).join(' '));
+ok('S6 deliverables renders clean (no leftover tokens)', api.preflight(vs6).length===0, api.preflight(vs6).join(' '));
+ok('ORCHESTRATOR encodes the autonomous gate flow + hard block', /AUTONOMOUS ORCHESTRATOR/.test(ORCH) && /NO SILENT DEGRADE/.test(ORCH) && /PASS BAR/.test(ORCH));
+ok('ORCHESTRATOR sets model tiers + budget governor + CONVERT-5 bar', /MODEL TIERS/.test(ORCH) && /BUDGET GOVERNOR/.test(ORCH) && /minus 5/.test(ORCH));
+ok('S6 storyboard = image PROMPTS only (no generation) + faithfulness gate', /Generate NO images/.test(S6) && /IMAGE-GEN PROMPT/.test(S6) && /FAITHFULNESS GATE/.test(S6));
 const s5nh=api.generatePrompt('S5', valsNH, RAW);
 ok('S5 learning-loop guards no-handle', /Learning loop not\s+yet active/.test(s5nh) && !/"resultsLimit": 30/.test(s5nh) && api.preflight(s5nh).length===0);
 ok('no-handle client still passes validation', Object.keys(api.validate(Object.assign({},api.TEST_CLIENT,{CLIENT_HANDLE:''}))).length===0);

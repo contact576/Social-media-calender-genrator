@@ -13,11 +13,26 @@ calls, holds no API keys, and has no build step** — it only generates text. Th
 happens when a human pastes the generated prompts into a connected chat. Keep that boundary: do not add
 fetch/API calls or a bundler to `index.html`.
 
+**Two run modes (a toggle on the Intake tab, `localStorage.smm_mode`, default `chat`):**
+- **Claude chat** — the default: emits the **five** copy-paste prompts (S1–S5), pasted one-by-one.
+- **Claude Code** — emits **one** "auto-run" prompt (the **ORCHESTRATOR** template) the operator pastes into a
+  Claude Code session; it runs the whole S1→S5 pipeline autonomously (maker→blind-checker at each gate, a
+  bounded regenerate ladder, a virality grader that loops scripts to ≥90 / ≥85 for CONVERT, a self-capping
+  Apify budget, then the **S6** deliverables: an 8–10 frame storyboard emitted as image-gen *prompts* — no
+  images generated, zero credits — plus a designer doc and optional generation prompts). The dashboard still
+  only generates text; the autonomy happens in the connected Claude Code session.
+
 ## The one architecture rule that matters: PROMPTS.md is the source of truth
 
 The five prompt templates live in **`PROMPTS.md`** (canonical). They are embedded into `index.html`
 inside `<script type="text/plain" class="raw-prompt" data-step="S#">` blocks by a generator
-(`inject_prompts.py` loops `S1..S5`).
+(`inject_prompts.py` loops `S1..S5`). The two **Claude-Code-mode** templates (`## ORCHESTRATOR`, `## S6`)
+also live in `PROMPTS.md` and are injected into `<script id="orchestrator-prompt">` / `<script id="s6-deliverables">`
+— **NOT** `raw-prompt` blocks, so `STEPS = Object.keys(RAW).sort()` stays length 5. The reconciler runs over
+`ALLTPL` (the 5 steps ∪ the 2 autonomous templates), so the `autorun` intake fields they consume
+(`SCRIPTS_TO_WRITE`, `REELS_TO_DECODE`, `OUTPUTS_WANTED`, `MIN_VIRALITY_SCORE`, `MAX_REGEN_LOOPS`,
+`RUN_BUDGET_USD`, `WHICH_AI_TOOL_NOTES`) are not flagged dead — land any new autorun field + its consuming
+token together. `selftest.mjs` asserts byte-parity for all seven templates.
 
 - **To change a prompt: edit `PROMPTS.md`, then run `python3 inject_prompts.py`.** Never hand-edit the
   `raw-prompt` blocks in `index.html` — they will be overwritten and will drift from the canonical copy.

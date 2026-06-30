@@ -31,6 +31,12 @@
   section.tabpane{display:none}
   section.tabpane.active{display:block}
   .lead{color:var(--muted);max-width:70ch;margin:0 0 18px}
+  .modebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+  .modebar-lab{font-size:13px;color:var(--muted);font-weight:600}
+  .modebtn{border:1px solid var(--line);background:var(--panel);color:var(--muted);padding:6px 14px;border-radius:20px;font-size:13px;cursor:pointer}
+  .modebtn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .modebar-hint{font-size:12px}
+  body.mode-chat .group[data-group^="Auto-run"]{display:none}
   .group{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:16px 18px;margin:0 0 16px}
   .group h3{font-family:var(--serif);font-weight:400;font-size:20px;margin:0 0 12px;border-bottom:1px solid var(--line);padding-bottom:6px}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -119,7 +125,13 @@
 
   <!-- ============ INTAKE ============ -->
   <section class="tabpane active" id="tab-intake">
-    <p class="lead">Fill every <span class="req accent">*</span> required field. Then press <strong>Generate prompts</strong> — the tool builds the eight copy-paste prompts on the next tab. Your entries are saved in this browser automatically.</p>
+    <div class="modebar" role="group" aria-label="Run mode">
+      <span class="modebar-lab">Run mode:</span>
+      <button type="button" class="modebtn" data-mode="chat">Claude chat · 5 prompts</button>
+      <button type="button" class="modebtn" data-mode="code">Claude Code · 1 auto-run</button>
+      <span class="modebar-hint muted"></span>
+    </div>
+    <p class="lead" id="intakeLead">Fill every <span class="req accent">*</span> required field, then press <strong>Generate</strong>. Your entries are saved in this browser automatically.</p>
     <div id="formHost"></div>
     <div class="actions">
       <button class="primary" id="btnGenerate">Generate prompts →</button>
@@ -560,6 +572,139 @@ echo BOTH exact paths + links, confirm no duplicate folder, and remind me that P
 run each month for the learning loop to function.
 No Drive? Output both files in code blocks to paste-save.</script>
 
+<!-- ===== Autonomous "Claude Code" mode templates (filled by inject_prompts.py; NOT raw-prompt blocks, so STEPS stays 5) ===== -->
+<script type="text/plain" id="orchestrator-prompt">You are the AUTONOMOUS ORCHESTRATOR for the SMM Virality Decoder, running inside Claude Code with the
+Apify + Higgsfield + Google Drive MCP connectors live. Run the ENTIRE decode-to-scripts pipeline for
+{{CLIENT_NAME}} end-to-end with NO human approval between steps, then produce the requested deliverables.
+Drive everything through SUB-AGENTS; you (the orchestrator) write little prose and burn few tokens.
+
+RUN SETTINGS (from the form)
+- Reels (final scripts) wanted: {{SCRIPTS_TO_WRITE}}
+- Niche winners to decode: {{REELS_TO_DECODE}}
+- Final outputs wanted: {{OUTPUTS_WANTED}}  (any of: designer-doc, storyboard, generation-prompts)
+- Virality pass bar: {{MIN_VIRALITY_SCORE}}/100 for REACH & NURTURE; that bar minus 5 for CONVERT/proof reels
+- Max regenerate rounds per item: {{MAX_REGEN_LOOPS}}
+- Apify spend ceiling: ${{RUN_BUDGET_USD}} (hard max $5)
+- Vault: {{VAULT_FOLDER}}  ·  Hard no-go (never produce): {{NO_GO_TOPICS}}  ·  Primary CTA: {{CTA_PRIMARY}}
+
+GLOBAL RULES (token/credit thrift + safety — non-negotiable)
+- MODEL TIERS: mechanical CHECKERS on the cheapest model (Haiku); makers + the grader on Sonnet; use Opus
+  for ONLY two roles — writing the scripts (Gate 4 maker) and the anti-fabrication check (Gate 3). Never
+  spawn an Opus swarm.
+- BOUNDED LOOPS: at most {{MAX_REGEN_LOOPS}} repair rounds per gate and ≤3 maker calls per gate total; keep
+  the best attempt (never ship a regen that scored lower). ONE global cap: if total sub-agent calls would
+  exceed (5 gates × 3) + ({{SCRIPTS_TO_WRITE}} × {{MAX_REGEN_LOOPS}}) + deliverables, STOP and report.
+- REUSE, NEVER RE-SCRAPE: checkers and feedback work from the Drive vault, not new Apify/Higgsfield calls.
+  A Gate-2 re-scrape is capped at 1 and forces a bounded re-run of Gates 3–4 under the SAME budget; if that
+  would breach ${{RUN_BUDGET_USD}}, refuse it and STOP with a flagged report.
+- BUDGET GOVERNOR (autonomous — never pause for a human): track cumulative Apify $ + item count. At 80% of
+  ${{RUN_BUDGET_USD}} enter THRIFT MODE (stop adding accounts, drop the Gemini overlay pass, lower
+  resultsLimit toward the ≥20-median floor). At 100% OR 1,500 items, stop scraping, emit what is decoded,
+  stamp "BUDGET-CAPPED — decoded X of N". Higgsfield analysis/transcribe = 0 credits; this pipeline
+  generates NO images, so it spends NO Higgsfield credits.
+- NO SILENT DEGRADE (hard-block): any gate that still fails its checks after the round cap, OR any script
+  below its pass bar, is HARD-BLOCKED — it does NOT flow into the deliverables. Stop, save the partial
+  vault, report the failing gate/script + its defects. The pass bar is a real gate, not cosmetic.
+
+THE PIPELINE — five gates, each MAKER → blind CHECKER (the checker sees the artifact + the spec, NOT the
+maker's reasoning). The MAKERS are the EXISTING S1–S5 prompts this dashboard already generates (switch the
+dashboard to Chat mode to copy them, or load them from the same intake) — run them VERBATIM; never rewrite
+the method.
+
+GATE 1 — Baseline (maker S1, Sonnet). Checker (Haiku): MODE line present; ESTABLISHED → BASELINE a real
+  median with n + missing/zero policy + LOW-CONFIDENCE stamp iff n<30; NEW/THIN → baseline "N/A" (no
+  invented number) + a RECOMMENDED voice; HANDOFF complete; s1-baseline.md saved.
+GATE 2 — Discover & Rank (maker S2, Sonnet) — SAME SESSION as Gate 3 (IG video URLs expire). Checker
+  (Haiku, mostly arithmetic): RUN RECEIPT one row per query; FUNNEL LINE reconciles; every kill names
+  accounts; every ranked reel OUTLIER = plays ÷ that account's own median with n; SHORTFALLs flagged not
+  padded; origins recorded; s2-discovery.md + s3-outliers.md saved. Cap deep-scrape to {{REELS_TO_DECODE}}
+  accounts; enforce the budget governor.
+GATE 3 — Decode & Synthesize (maker S3, Sonnet). Checker (Haiku): VERBAL states detected-language + engine;
+  VISUAL on ≥10 top outliers (or a loud "INVALIDATES scripts" notice); OVERLAY a SEPARATE channel (flag if
+  it just copies the spoken hook); cards tagged + ORIGIN + IDs; confidence + honest GEO/LANGUAGE skew stamp;
+  THE GAP cites ≥3 card IDs; both files saved. PLUS an ANTI-FABRICATION check (Opus — the only Opus
+  checker): does any VERBAL read as written-from-caption rather than a real transcript? A non-English reel
+  that "auto-detected English" = FAIL. Is THE GAP real, the skew verdict honest? A wrong PASS here poisons
+  every downstream script, which is why this single check earns Opus.
+GATE 4 — Plan & Script (maker S4, OPUS — the one creative stage) → then the GRADER loop (below). Checker
+  (Haiku): COVERAGE X==N (X<N = FAIL); cadence ≤3/wk; 40/40/20 reported with integer counts; every cited
+  card ID exists; each script's first row carries all 3 hook channels with OVERLAY≠VERBAL; CONVERT slots
+  cite real proof or are flagged "needs proof" (never invented); NO-GO clean; s6-calendar.md +
+  s7-scripts.md saved.
+GATE 5 — Showcase + Learning Loop (maker S5, Sonnet). Checker (Haiku): 7-file LOAD RECEIPT complete with
+  s2-discovery + s3-outliers PRESENT (STOP if absent); report COVERAGE shows scripts==slots; every headline
+  number cites its vault file; every upstream LOW-CONFIDENCE/UNAVAILABLE/PARTIAL/GEO-SKEWED flag carried
+  through; s8-report.md + s8b-learning-loop.md saved.
+
+THE REPAIR LADDER (cheapest fix first; bounded): on a checker FAIL, classify each defect and apply the
+narrowest repair — AUGMENT (redo ONLY the missing pieces, reuse all prior work) → REVAMP (fix the specific
+wrong items, no re-scrape) → REGENERATE (core output invalid; reuse cached datasets/live URLs). Caps as in
+GLOBAL RULES. On exhausting the cap, HARD-BLOCK (do not advance) and report.
+
+THE VIRALITY GRADER (Gate 4, Sonnet — ONE grader; scores TEXT only; Higgsfield virality_predictor is NOT
+used, it needs a finished video). Grade every script 0–100: score each axis 0–10 with a quoted
+justification that cites the SPECIFIC script line AND the decoded card's mechanic, then weight —
+  Hook strength (verbal) 18 · Visual hook 14 · Overlay hook 12 (if identical to spoken, cap at 3) ·
+  Retention/return hook 14 · Share trigger 12 · Owned-proof / account-swap 12 (generic = cap at 4) ·
+  NO-GO compliance 8 (VETO — any breach forces TOTAL = 0) · Length/format fit 5 · Trend traceability 5
+  (must quote a real decoded winner C# from THIS run; invented-from-nothing = 0).
+  PASS BAR: REACH & NURTURE ≥ {{MIN_VIRALITY_SCORE}}; CONVERT/proof ≥ ({{MIN_VIRALITY_SCORE}} minus 5) WITH
+  a real proof point on file (proof reels legitimately trade share-trigger for credibility — do NOT water
+  them down to chase points). Grade all scripts in ONE batched call; only sub-bar scripts re-enter, sent
+  back to the S4 maker with ONLY their failing axes + fix notes + the C# to lean on harder. Best-of-N; stop
+  after {{MAX_REGEN_LOOPS}} rounds or if two rounds fail to gain ≥2 points. If the whole batch stays low,
+  STOP and report "systemic low scores — likely thin/GEO-SKEWED decode; re-run discovery" (fault is
+  upstream). A script still under bar after the cap is HARD-BLOCKED (see NO SILENT DEGRADE).
+
+DELIVERABLES: once Gate 5 passes and every emitted script is at/above its bar, run the S6 — Storyboard &
+Deliverables prompt for the {{SCRIPTS_TO_WRITE}} approved scripts, honoring {{OUTPUTS_WANTED}}.
+
+FINAL REPORT (concise): per-gate verdicts + repair counts; each script's final score + bucket; actual Apify
+$ spent + item count; which deliverables were produced + their vault paths; any HARD-BLOCK + its reason.
+Then invite feedback in THIS chat ("regrade reel 7", "make frame 3 punchier") — apply it surgically from
+the vault, never re-scrape.</script>
+<script type="text/plain" id="s6-deliverables">You are the DELIVERABLES maker (Sonnet) for {{CLIENT_NAME}}. The pipeline has produced grader-passed
+two-column scripts in "{{VAULT_FOLDER}}/s7-scripts.md". Turn the {{SCRIPTS_TO_WRITE}} approved scripts into
+exactly the outputs the operator asked for: {{OUTPUTS_WANTED}} (any of: designer-doc, storyboard,
+generation-prompts). Generate NO images — write the storyboard as detailed image-GEN PROMPTS the operator
+renders externally (Nano Banana Pro / GPT-Image / etc.). This step spends NO credits.
+
+VAULT LOAD (FIRST): load "{{VAULT_FOLDER}}/s7-scripts.md" (+ s4-decode/s5-patterns for traceability). LOAD
+RECEIPT: echo found y/n + last-modified; if s7-scripts is missing, STOP.
+
+FOR EACH approved script, produce ONLY the requested sections:
+
+[storyboard] — an 8–10 FRAME STORYBOARD as a markdown table, one row per frame:
+  ### Reel <n> — "<title>" storyboard
+  | # | TIME | VO / SPOKEN LINE | ON-SCREEN OVERLAY | VISUAL / SHOT | IMAGE-GEN PROMPT |
+  |---|---|---|---|---|---|
+  Rules: expand the script beats into 8–10 frames WITHOUT dropping a single VO line or overlay (split long
+  beats, merge tiny ones); frame 1 carries all three hook channels. VO / SPOKEN LINE and ON-SCREEN OVERLAY
+  must be VERBATIM from the script row they come from. IMAGE-GEN PROMPT = a self-contained, render-ready
+  prompt: subject + action, framing/shot (close-up / over-shoulder / split-screen…), setting, lighting/
+  mood, the exact on-screen text to bake in (quote the overlay), 9:16 aspect, style — it must stand alone
+  (a designer pastes ONLY that cell). For a repeated setup write "REUSE frame N's image". After the table,
+  a RENDERER NOTE recommending where to paste each prompt (e.g. Nano Banana Pro for text/overlay-accurate
+  or dashboard/UI frames; GPT-Image or Seedream for stylized talking-head/lifestyle) — short, with reasons.
+
+[designer-doc] — a designer/editor-ready section to BUILD the reel without images: the two-column script
+  (audio | visual+overlay) with the VISUAL HOOK and OVERLAY HOOK called out as first-class labelled lines,
+  the CTA (tied to {{CTA_PRIMARY}}), audio, length. If {{WHICH_AI_TOOL_NOTES}} is "on", append a one-line
+  per-frame "which AI tool" suggestion; if "off", omit tool notes. Pure text, client-safe.
+
+[generation-prompts] — ONLY if {{OUTPUTS_WANTED}} includes generation-prompts: per-frame image/video
+  generation prompts as fenced code blocks, kept separate so a client storyboard isn't polluted with jargon.
+
+FAITHFULNESS GATE (before emitting): every storyboard frame's VO + OVERLAY is a verbatim line from a source
+script row; frame count is 8–10; nothing from the script is missing. Fix any failing frame once, then emit.
+
+VAULT SAVE: save the deliverables to "{{VAULT_FOLDER}}/s9-deliverables.md" (storyboard + designer-doc +
+optional prompts, per reel). Echo the path + link; confirm no duplicate folder.
+No Drive? Output the file in a code block to paste-save.
+
+FEEDBACK (same chat): a follow-up like "make reel 7 frame 3 punchier" edits ONLY that frame, re-runs the
+faithfulness check on it, re-emits the table + a one-line CHANGE LOG. Work from the vault — never re-scrape.</script>
+
 <!-- ===== Beautifier sample report (used by the System check + "Load sample report") ===== -->
 <script type="text/plain" id="sample-report">
 # SMM Virality Report — Acme Dental
@@ -646,7 +791,14 @@ const FIELD_KEYS=[
  {key:'PRODUCTION_MODES',label:'How videos get made',group:'Content strategy',type:'text',required:true,help:'e.g. phone (founder on camera), AI-avatar, designer/editor.'},
  {key:'CTA_PRIMARY',label:'Main call-to-action (CTA)',group:'Content strategy',type:'text',required:true,help:'What you want viewers to do — e.g. "comment a keyword to get a DM", "book a call".'},
  {key:'ADDITIONAL_NOTES',label:'Anything else worth knowing',group:'Anything else',type:'textarea',multiline:'flow',required:false,help:'Optional catch-all: brand voice, proof/results to feature, preferred content themes, constraints — anything not covered above. The prompts use this wherever relevant.'},
- {key:'VAULT_FOLDER',label:'Google Drive folder for saved files',group:'Ops',type:'text',required:true,help:'The AI saves each step’s results here. Auto-named after the client as you type — you don’t need to create the folder yourself.'}
+ {key:'VAULT_FOLDER',label:'Google Drive folder for saved files',group:'Ops',type:'text',required:true,help:'The AI saves each step’s results here. Auto-named after the client as you type — you don’t need to create the folder yourself.'},
+ {key:'SCRIPTS_TO_WRITE',label:'How many reels (scripts) do you want?',group:'Auto-run (Claude Code mode)',type:'number',required:false,default:'10',help:'Claude Code mode only. The number of final reels/scripts the autonomous run should produce.'},
+ {key:'REELS_TO_DECODE',label:'Niche winners to decode',group:'Auto-run (Claude Code mode)',type:'number',required:false,default:'12',help:'Claude Code mode only. How many top niche reels to deep-decode before writing. More = richer, but costs more scraping.'},
+ {key:'OUTPUTS_WANTED',label:'Final outputs',group:'Auto-run (Claude Code mode)',type:'text',required:false,default:'storyboard, designer-doc',help:'Claude Code mode only. Any of: designer-doc, storyboard, generation-prompts (comma-separated).'},
+ {key:'MIN_VIRALITY_SCORE',label:'Virality pass bar (out of 100)',group:'Auto-run (Claude Code mode)',type:'number',required:false,default:'90',help:'Claude Code mode only. A script must score at least this to be delivered (CONVERT reels pass 5 points lower).'},
+ {key:'MAX_REGEN_LOOPS',label:'Max regenerate rounds',group:'Auto-run (Claude Code mode)',type:'number',required:false,default:'2',help:'Claude Code mode only. How many times a sub-par stage or script may be regenerated before it stops. Higher = better quality, more tokens.'},
+ {key:'RUN_BUDGET_USD',label:'Scrape budget (US$)',group:'Auto-run (Claude Code mode)',type:'number',required:false,default:'4',help:'Claude Code mode only. Hard ceiling on Apify scraping spend for the run (max $5). The run never pauses to ask — it caps itself.'},
+ {key:'WHICH_AI_TOOL_NOTES',label:'Add “which AI tool” notes to the designer doc?',group:'Auto-run (Claude Code mode)',type:'text',required:false,default:'off',help:'Claude Code mode only. Type “on” to append per-frame tool suggestions (e.g. Nano Banana Pro / Seedance) to the designer document; “off” to omit.'}
 ];
 const DERIVED_KEYS=['CURRENT_DATE'];
 const TEST_CLIENT={
@@ -664,7 +816,9 @@ const TEST_CLIENT={
  PRODUCTION_MODES:'phone (founder on camera); AI-avatar (Higgsfield); fully-AI / storytelling',
  CTA_PRIMARY:'Comment the keyword to get the plan in DMs / book a call (link in bio)',
  ADDITIONAL_NOTES:'Voice: blunt, confident, proof-driven. Proof to feature: real client results across home services, realtors, clinics. Suggested pillars: Education, Social Proof/Case Studies, Origin/Founder Story, Contrarian/Industry-callout.',
- VAULT_FOLDER:'PPC Guru — SMM Virality Vault'
+ VAULT_FOLDER:'PPC Guru — SMM Virality Vault',
+ SCRIPTS_TO_WRITE:'10', REELS_TO_DECODE:'12', OUTPUTS_WANTED:'storyboard, designer-doc',
+ MIN_VIRALITY_SCORE:'90', MAX_REGEN_LOOPS:'2', RUN_BUDGET_USD:'4', WHICH_AI_TOOL_NOTES:'off'
 };
 const STEP_TITLES={S1:'Client Baseline',S2:'Discover & Rank',S3:'Decode & Synthesize',S4:'Plan & Script',S5:'Showcase + Learning Loop'};
 </script>
@@ -819,6 +973,12 @@ if(typeof module!=='undefined'&&module.exports){module.exports={FIELD_KEYS,DERIV
   if(typeof document==='undefined') return;
   const RAW={}; document.querySelectorAll('script.raw-prompt').forEach(s=>{ RAW[s.dataset.step]=s.textContent; });
   const STEPS=Object.keys(RAW).sort();   // single source of truth for the step list (no hand-maintained duplicate)
+  // Autonomous "Claude Code" mode templates — included in the reconciler scope, but NOT in STEPS.
+  const ORCH=(document.getElementById('orchestrator-prompt')||{}).textContent||'';
+  const S6D=(document.getElementById('s6-deliverables')||{}).textContent||'';
+  const ALLTPL=Object.assign({}, RAW, {ORCHESTRATOR:ORCH, S6DELIV:S6D});
+  const renderTpl=(t,vals)=> replacePlaceholders(applyConditionals(t,vals),vals).replace(/\n{3,}/g,'\n\n').trim();
+  let CURRENT_MODE = (function(){ try{ return localStorage.getItem('smm_mode')==='code'?'code':'chat'; }catch(e){ return 'chat'; } })();
   const STORE='smm_intake_v1';
   const $=s=>document.querySelector(s); const ce=(t,c)=>{const e=document.createElement(t); if(c)e.className=c; return e;};
 
@@ -834,7 +994,7 @@ if(typeof module!=='undefined'&&module.exports){module.exports={FIELD_KEYS,DERIV
   const host=$('#formHost'); const groups={};
   FIELD_KEYS.forEach(f=>{ (groups[f.group]=groups[f.group]||[]).push(f); });
   Object.keys(groups).forEach(gName=>{
-    const g=ce('div','group'); const h=ce('h3'); h.textContent=gName; g.appendChild(h);
+    const g=ce('div','group'); g.dataset.group=gName; const h=ce('h3'); h.textContent=gName; g.appendChild(h);
     const grid=ce('div','grid');
     groups[gName].forEach(f=>{
       const wrap=ce('div','field'+((f.type==='textarea')?' full':''));
@@ -843,7 +1003,7 @@ if(typeof module!=='undefined'&&module.exports){module.exports={FIELD_KEYS,DERIV
       wrap.appendChild(lab);
       let inp;
       if(f.type==='textarea'){ inp=ce('textarea'); }
-      else { inp=ce('input'); inp.type=(f.type==='date')?'date':'text'; }
+      else { inp=ce('input'); inp.type=(f.type==='date')?'date':(f.type==='number')?'number':'text'; }
       inp.id='f_'+f.key; if(f.default) inp.value=f.default;
       inp.addEventListener('input',save);
       wrap.appendChild(inp);
@@ -855,13 +1015,13 @@ if(typeof module!=='undefined'&&module.exports){module.exports={FIELD_KEYS,DERIV
   });
 
   function readForm(){ const o={}; FIELD_KEYS.forEach(f=>{ o[f.key]=($('#f_'+f.key)||{}).value||''; }); return o; }
-  function writeForm(o){ FIELD_KEYS.forEach(f=>{ const el=$('#f_'+f.key); if(el) el.value=o[f.key]||''; }); }
+  function writeForm(o){ FIELD_KEYS.forEach(f=>{ const el=$('#f_'+f.key); if(el) el.value=(o[f.key]!=null && o[f.key]!=='')?o[f.key]:(f.default||''); }); }
   function save(){ try{ localStorage.setItem(STORE, JSON.stringify(readForm())); }catch(e){} }
   function restore(){ try{ const s=localStorage.getItem(STORE); if(s){ const o=JSON.parse(s); if(o&&typeof o==='object') writeForm(o); } }catch(e){} }
 
   // ---- reconciler banner on load ----
   function showRecon(){
-    const r=reconcile(RAW); const b=$('#reconBanner');
+    const r=reconcile(ALLTPL); const b=$('#reconBanner');
     if(r.orphans.length){
       b.className='banner bad';
       b.innerHTML='<strong>This tool has a problem — it’s not your fault.</strong> Please don’t use these prompts; contact your developer. <span class="muted">(unmatched placeholders: '+r.orphans.join(', ')+')</span>';
@@ -876,7 +1036,7 @@ if(typeof module!=='undefined'&&module.exports){module.exports={FIELD_KEYS,DERIV
     Object.keys(errs).forEach(k=>{ const w=document.querySelector('.field[data-key="'+k+'"]'); if(w){ w.classList.add('invalid'); const er=w.querySelector('.err'); if(er) er.textContent=errs[k]; } });
   }
   function generate(){
-    const rec=reconcile(RAW); if(rec.orphans.length){ showRecon(); document.querySelector('nav.tabs button[data-tab="intake"]').click(); return false; }
+    const rec=reconcile(ALLTPL); if(rec.orphans.length){ showRecon(); document.querySelector('nav.tabs button[data-tab="intake"]').click(); return false; }
     const raw=readForm(); const errs=validate(raw);
     if(Object.keys(errs).length){
       markErrors(errs);
@@ -886,6 +1046,22 @@ if(typeof module!=='undefined'&&module.exports){module.exports={FIELD_KEYS,DERIV
     }
     clearErrors(); $('#formMsg').textContent='';
     const vals=buildValues(raw); const host=$('#promptHost'); host.innerHTML='';
+    if(CURRENT_MODE==='code'){
+      const text=renderTpl(ORCH, vals); const pf=preflight(text);
+      const card=ce('div','stepcard'); const head=ce('div','head');
+      const t=ce('div','t'); t.textContent='Autonomous run — paste into Claude Code'; head.appendChild(t);
+      const right=ce('div','right');
+      const badge=ce('span','badge '+(pf.length?'bad':'ok')); badge.textContent=pf.length?('⚠ '+pf.length+' leftover'):'✓ clean'; right.appendChild(badge);
+      const cp=ce('button','ghost'); cp.textContent='Copy auto-run prompt'; cp.disabled=!!pf.length; cp.addEventListener('click',()=>copyText(text,cp)); right.appendChild(cp);
+      head.appendChild(right); card.appendChild(head);
+      const cue=ce('div'); cue.style.cssText='font-size:12px;color:var(--muted);padding:6px 14px;border-bottom:1px solid var(--line)';
+      cue.textContent='Paste this whole prompt into a Claude Code session that has the Apify + Higgsfield + Google Drive connectors. It runs all 5 steps automatically, QC-checks and grades every script, and produces your chosen outputs — no copy-pasting between steps.';
+      card.appendChild(cue);
+      const pre=ce('pre'); pre.textContent=text; card.appendChild(pre); host.appendChild(card);
+      document.querySelector('nav.tabs button[data-tab="prompts"]').click();
+      if(pf.length){ const b=$('#reconBanner'); b.className='banner bad'; b.innerHTML='<strong>This tool has a problem — it’s not your fault.</strong> The auto-run prompt didn’t fill in correctly (Copy is off). Please contact your developer.'; }
+      return !pf.length;
+    }
     let allClean=true;
     STEPS.forEach((step,i)=>{
       const text=generatePrompt(step, vals, RAW); const pf=preflight(text); if(pf.length) allClean=false;
@@ -925,7 +1101,7 @@ if(typeof module!=='undefined'&&module.exports){module.exports={FIELD_KEYS,DERIV
   // ---- diagnostics ----
   function runDiagnostics(){
     const host=$('#diagHost'); host.innerHTML=''; const checks=[];
-    const r=reconcile(RAW);
+    const r=reconcile(ALLTPL);
     checks.push(['Reconciler — no orphan placeholders', r.orphans.length===0, r.orphans.length? ('orphans: '+r.orphans.join(', ')) : 'all template tokens map to a field']);
     checks.push(['Reconciler — no dead form fields', r.deadKeys.length===0, r.deadKeys.length? ('unused: '+r.deadKeys.join(', ')) : 'every field is used by a prompt']);
     const titleKeys=Object.keys(STEP_TITLES).sort();
@@ -981,8 +1157,21 @@ if(typeof module!=='undefined'&&module.exports){module.exports={FIELD_KEYS,DERIV
   // ---- connected-chat link (set data-chat-link on #chatLink to enable the button) ----
   (function(){ const a=document.getElementById('chatLink'); if(a){ const u=(a.getAttribute('data-chat-link')||'').trim(); if(u){ a.href=u; a.target='_blank'; a.rel='noopener'; a.style.display='inline-block'; a.style.cssText='display:inline-block;margin-top:6px;font-weight:600'; } } })();
 
+  // ---- run-mode toggle (Claude chat vs Claude Code) ----
+  function applyMode(){
+    document.body.classList.remove('mode-chat','mode-code'); document.body.classList.add('mode-'+CURRENT_MODE);
+    document.querySelectorAll('.modebtn').forEach(b=>b.classList.toggle('active', b.dataset.mode===CURRENT_MODE));
+    const hint=document.querySelector('.modebar-hint');
+    if(hint) hint.textContent = CURRENT_MODE==='code' ? 'One prompt that runs the whole pipeline autonomously in Claude Code.' : 'Five prompts you paste one-by-one into a connected Claude chat.';
+    const lead=$('#intakeLead'); if(lead) lead.innerHTML = CURRENT_MODE==='code'
+      ? 'Fill the required fields <em>and</em> the Auto-run settings below, then press <strong>Generate</strong> for one autonomous-run prompt to paste into Claude Code.'
+      : 'Fill every <span class="req accent">*</span> required field, then press <strong>Generate</strong>. Your entries are saved in this browser automatically.';
+    const gen=$('#btnGenerate'); if(gen) gen.textContent = CURRENT_MODE==='code' ? 'Generate auto-run prompt →' : 'Generate prompts →';
+  }
+  document.querySelectorAll('.modebtn').forEach(b=>b.addEventListener('click',()=>{ CURRENT_MODE=(b.dataset.mode==='code')?'code':'chat'; try{localStorage.setItem('smm_mode',CURRENT_MODE);}catch(e){} applyMode(); }));
+
   // ---- init ----
-  restore(); showRecon();
+  restore(); showRecon(); applyMode();
 })();
 </script>
 </body>
