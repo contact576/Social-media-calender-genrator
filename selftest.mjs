@@ -89,6 +89,13 @@ ok('S6 deliverables renders clean (no leftover tokens)', api.preflight(vs6).leng
 ok('ORCHESTRATOR encodes the autonomous gate flow + hard block', /AUTONOMOUS ORCHESTRATOR/.test(ORCH) && /NO SILENT DEGRADE/.test(ORCH) && /PASS BAR/.test(ORCH));
 ok('ORCHESTRATOR sets model tiers + budget governor + CONVERT-5 bar', /MODEL TIERS/.test(ORCH) && /BUDGET GOVERNOR/.test(ORCH) && /minus 5/.test(ORCH));
 ok('S6 storyboard = image PROMPTS only (no generation) + faithfulness gate', /Generate NO images/.test(S6) && /IMAGE-GEN PROMPT/.test(S6) && /FAITHFULNESS GATE/.test(S6));
+// QC fixes (calibration + runnability)
+ok('ORCHESTRATOR has an explicit, reproducible scoring formula', /SCORING FORMULA/.test(ORCH) && /axis_points = \(raw/.test(ORCH));
+ok('ORCHESTRATOR bar is bucket-scoped (format-led minus 3)', /minus 3\)/.test(ORCH) && /minus 5\)/.test(ORCH));
+ok('ORCHESTRATOR budget governor is item-first, not live $', /the hard, directly-observable cap is ITEMS/.test(ORCH));
+ok('ORCHESTRATOR bundles the maker templates (self-contained run)', /APPENDED BELOW/.test(ORCH));
+ok('ORCHESTRATOR grader caps the unguarded axes (retention/share)', /device asserted without a quoted script line/.test(ORCH) && /not\s*\n?\s*tied to a named §2\.3 trigger/.test(ORCH.replace(/\n\s*/g,' ')));
+ok('S6 faithfulness has a SOURCE→FRAME coverage check', /SOURCE→FRAME coverage/.test(S6));
 const s5nh=api.generatePrompt('S5', valsNH, RAW);
 ok('S5 learning-loop guards no-handle', /Learning loop not\s+yet active/.test(s5nh) && !/"resultsLimit": 30/.test(s5nh) && api.preflight(s5nh).length===0);
 ok('no-handle client still passes validation', Object.keys(api.validate(Object.assign({},api.TEST_CLIENT,{CLIENT_HANDLE:''}))).length===0);
