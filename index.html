@@ -885,6 +885,12 @@ function validate(raw){
     if(f.required && !v){ errs[f.key]='Required.'; return; }
     if(f.key==='CLIENT_HANDLE' && v && !/^[A-Za-z0-9._]{1,30}$/.test(v)) errs[f.key]='Handle: letters, numbers, dots, underscores only.';
     if(f.minLines){ const n=(raw[f.key]||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean).length; if(n<f.minLines) errs[f.key]='Enter at least '+f.minLines+' (one per line).'; }
+    // Auto-run (Claude Code) settings — validated only when a value is present (they carry defaults)
+    if(f.key==='RUN_BUDGET_USD' && v && (isNaN(+v) || +v<=0 || +v>5)) errs[f.key]='Enter a number between 0 and 5 (Apify $ ceiling).';
+    if(f.key==='MIN_VIRALITY_SCORE' && v && (isNaN(+v) || +v<0 || +v>100)) errs[f.key]='Enter a number 0–100.';
+    if((f.key==='SCRIPTS_TO_WRITE'||f.key==='REELS_TO_DECODE'||f.key==='MAX_REGEN_LOOPS') && v && (!/^\d+$/.test(String(v).trim()) || +v<1)) errs[f.key]='Enter a whole number of at least 1.';
+    if(f.key==='WHICH_AI_TOOL_NOTES' && v && !/^(on|off)$/i.test(String(v).trim())) errs[f.key]='Type “on” or “off”.';
+    if(f.key==='OUTPUTS_WANTED' && v && !/(designer-doc|storyboard|generation-prompts)/i.test(v)) errs[f.key]='Include at least one of: designer-doc, storyboard, generation-prompts.';
   });
   return errs;
 }
