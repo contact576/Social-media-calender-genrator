@@ -185,6 +185,29 @@ without the Drive connector.
   renderer** (styled raw container), never drops them. A **`blocksParsed === blocksRendered`** assertion
   shows a visible warning on mismatch. Phase-5 QC renders deliberately-unknown markdown to prove it.
 
+## 6b. Two run modes: Claude chat vs Claude Code (autonomous)
+A toggle on the Intake tab (`localStorage.smm_mode`, default `chat`) picks how the same intake is consumed:
+- **Claude chat** — emits the five S1–S5 prompts (the flow above). Unchanged.
+- **Claude Code** — emits **one** ORCHESTRATOR prompt the operator pastes into a Claude Code session; it
+  runs S1→S5 autonomously via sub-agents (each gate = **maker → blind checker**), a bounded
+  **AUGMENT→REVAMP→REGENERATE** repair ladder, a **virality grader** looping scripts to **≥90 (≥85 CONVERT)**,
+  a **self-capping Apify budget** (auto-abort, never pauses), a **NO-SILENT-DEGRADE hard block**, then the
+  **S6** deliverables: an 8–10 frame storyboard emitted as **image-gen prompts** (no images generated → 0
+  Higgsfield credits) + a designer doc + optional generation prompts + a same-chat feedback loop.
+
+**Model tiers (thrift):** Haiku checkers, Sonnet makers/grader, Opus on only two roles (script-writing +
+the Gate-3 anti-fabrication check). **Launch surface:** paste-the-orchestrator (no skill file in v1).
+
+**Wiring / invariants (must hold):** the two templates live in `PROMPTS.md` (`## ORCHESTRATOR`, `## S6`)
+and inject into `<script id="orchestrator-prompt">` / `<script id="s6-deliverables">` — **not** `raw-prompt`
+blocks — so `STEPS` stays length 5. `reconcile()` scopes over **`ALLTPL`** (the 5 steps ∪ the 2 autonomous
+templates) so the new `autorun` fields aren't dead keys. New intake fields (group *Auto-run*, all defaulted
+so chat-mode validation/blank-form counts are unchanged; hidden in chat mode): `SCRIPTS_TO_WRITE`,
+`REELS_TO_DECODE`, `OUTPUTS_WANTED`, `MIN_VIRALITY_SCORE`, `MAX_REGEN_LOOPS`, `RUN_BUDGET_USD`,
+`WHICH_AI_TOOL_NOTES`. `selftest.mjs` asserts byte-parity for all **seven** templates + reconcile-clean over
+`ALLTPL`. **Not yet validated (pre-live):** whether Claude Code sub-agents inherit the MCP connectors, and
+Higgsfield/Apify tool names + costs at scale.
+
 ## 7. Explicitly OUT of v1 (BLUEPRINT §9 + brief)
 Auto-posting/scheduling · YouTube Shorts · comment-sentiment mining · influencer-outreach lists · paid
 amplification bridge to the ads tool · multi-client trend dashboard · **the dashboard calling

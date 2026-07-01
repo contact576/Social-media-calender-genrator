@@ -228,6 +228,17 @@ Terse in-chat outputs; Research Vault save/load (§6); steps runnable in fresh c
   RE-RUN: scrape client's own last-30-days reels, outlier-score our own posts vs S1 baseline,
   "keep / kill / double-down" verdicts, feed S6's next month.
 
+### 5b. Autonomous "Claude Code" mode (the same methodology, run hands-free)
+The dashboard offers a second mode that runs the whole chain end-to-end with no human copy-pasting: one
+ORCHESTRATOR prompt drives the five stages via sub-agents, each gate paired **maker → blind checker**
+(the project's fresh-eyes QC rule), with a bounded AUGMENT→REVAMP→REGENERATE repair ladder and a
+self-capping Apify budget. It adds a **virality grader** — an LLM judge on the *script text* (NOT
+Higgsfield `virality_predictor`, which needs a finished video) that scores each script on the §2.1/§2.3
+mechanics and loops regenerate-with-feedback until **≥90 (≥85 for proof/CONVERT reels)**, hard-blocking
+anything below bar. The deliverable is an 8–10 frame storyboard emitted as **image-generation prompts**
+(rendered externally on Nano Banana Pro / GPT-Image — the tool generates no images and spends no credits)
+plus a designer-ready doc. The decode methodology (§2) is unchanged; autonomy is orchestration around it.
+
 ## 6. Architecture: reuse the PATTERNS, not the code
 
 Build a fresh single-file `index.html` dashboard (new repo) with the proven skeleton:
