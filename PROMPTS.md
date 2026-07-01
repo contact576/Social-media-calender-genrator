@@ -446,7 +446,7 @@ RUN SETTINGS (from the form)
 - Reels (final scripts) wanted: {{SCRIPTS_TO_WRITE}}
 - Niche winners to decode: {{REELS_TO_DECODE}}
 - Final outputs wanted: {{OUTPUTS_WANTED}}  (any of: designer-doc, storyboard, generation-prompts)
-- Virality pass bar: {{MIN_VIRALITY_SCORE}}/100 for REACH & NURTURE; that bar minus 5 for CONVERT/proof reels
+- Virality pass bar: {{MIN_VIRALITY_SCORE}}/100 for proof-led REACH & NURTURE; that bar minus 3 for format-led (proof-less) reach/nurture; minus 5 for CONVERT/proof reels
 - Max regenerate rounds per item: {{MAX_REGEN_LOOPS}}
 - Apify spend ceiling: ${{RUN_BUDGET_USD}} (hard max $5)
 - Vault: {{VAULT_FOLDER}}  ·  Hard no-go (never produce): {{NO_GO_TOPICS}}  ·  Primary CTA: {{CTA_PRIMARY}}
@@ -454,26 +454,34 @@ RUN SETTINGS (from the form)
 GLOBAL RULES (token/credit thrift + safety — non-negotiable)
 - MODEL TIERS: mechanical CHECKERS on the cheapest model (Haiku); makers + the grader on Sonnet; use Opus
   for ONLY two roles — writing the scripts (Gate 4 maker) and the anti-fabrication check (Gate 3). Never
-  spawn an Opus swarm.
+  spawn an Opus swarm. If per-sub-agent model selection isn't available, run one model but KEEP the role
+  separation (the blind checker sees ONLY the artifact + spec, never the maker's reasoning) and note
+  degraded-thrift in the FINAL REPORT.
 - BOUNDED LOOPS: at most {{MAX_REGEN_LOOPS}} repair rounds per gate and ≤3 maker calls per gate total; keep
-  the best attempt (never ship a regen that scored lower). ONE global cap: if total sub-agent calls would
-  exceed (5 gates × 3) + ({{SCRIPTS_TO_WRITE}} × {{MAX_REGEN_LOOPS}}) + deliverables, STOP and report.
+  the best attempt (never ship a regen that scored lower). Track a RUNNING TALLY of every sub-agent call
+  (makers + checkers + grader rounds + deliverables) and print it in the FINAL REPORT; if it would exceed
+  (5 gates × 3 makers) + (5 checkers) + ({{SCRIPTS_TO_WRITE}} × {{MAX_REGEN_LOOPS}} grader rounds) +
+  deliverables, STOP and report.
 - REUSE, NEVER RE-SCRAPE: checkers and feedback work from the Drive vault, not new Apify/Higgsfield calls.
   A Gate-2 re-scrape is capped at 1 and forces a bounded re-run of Gates 3–4 under the SAME budget; if that
-  would breach ${{RUN_BUDGET_USD}}, refuse it and STOP with a flagged report.
-- BUDGET GOVERNOR (autonomous — never pause for a human): track cumulative Apify $ + item count. At 80% of
-  ${{RUN_BUDGET_USD}} enter THRIFT MODE (stop adding accounts, drop the Gemini overlay pass, lower
-  resultsLimit toward the ≥20-median floor). At 100% OR 1,500 items, stop scraping, emit what is decoded,
-  stamp "BUDGET-CAPPED — decoded X of N". Higgsfield analysis/transcribe = 0 credits; this pipeline
-  generates NO images, so it spends NO Higgsfield credits.
+  would breach the item cap below, refuse it and STOP with a flagged report.
+- BUDGET GOVERNOR (autonomous — never pause for a human): the hard, directly-observable cap is ITEMS /
+  ACCOUNTS, not dollars (Apify surfaces compute units, not live $) — deep-scrape ≤ {{REELS_TO_DECODE}}
+  accounts, ≤1,500 total items, resultsLimit at the ≥20-median floor. At ~80% of the item cap enter THRIFT
+  MODE (stop adding accounts, drop the Gemini overlay pass). At the item cap, stop scraping, emit what is
+  decoded, stamp "BUDGET-CAPPED — decoded X of N". Treat ${{RUN_BUDGET_USD}} as a spend ESTIMATE reported in
+  the FINAL REPORT. Higgsfield analysis/transcribe = 0 credits; this pipeline generates NO images, so it
+  spends NO Higgsfield credits.
 - NO SILENT DEGRADE (hard-block): any gate that still fails its checks after the round cap, OR any script
   below its pass bar, is HARD-BLOCKED — it does NOT flow into the deliverables. Stop, save the partial
   vault, report the failing gate/script + its defects. The pass bar is a real gate, not cosmetic.
 
 THE PIPELINE — five gates, each MAKER → blind CHECKER (the checker sees the artifact + the spec, NOT the
-maker's reasoning). The MAKERS are the EXISTING S1–S5 prompts this dashboard already generates (switch the
-dashboard to Chat mode to copy them, or load them from the same intake) — run them VERBATIM; never rewrite
-the method.
+maker's reasoning). The MAKERS are the S1–S5 prompt templates whose fully-rendered text is APPENDED BELOW
+this orchestrator (under "MAKER TEMPLATES") — hand each gate's maker sub-agent the matching S# block and run
+it VERBATIM; never rewrite the method. Run GATES 2 and 3 in ONE sub-agent invocation (IG videoUrls expire
+between separate contexts); a single-reel expired-URL re-fetch inside that invocation does NOT count against
+the Gate-2 re-scrape cap.
 
 GATE 1 — Baseline (maker S1, Sonnet). Checker (Haiku): MODE line present; ESTABLISHED → BASELINE a real
   median with n + missing/zero policy + LOW-CONFIDENCE stamp iff n<30; NEW/THIN → baseline "N/A" (no
@@ -506,22 +514,33 @@ wrong items, no re-scrape) → REGENERATE (core output invalid; reuse cached dat
 GLOBAL RULES. On exhausting the cap, HARD-BLOCK (do not advance) and report.
 
 THE VIRALITY GRADER (Gate 4, Sonnet — ONE grader; scores TEXT only; Higgsfield virality_predictor is NOT
-used, it needs a finished video). Grade every script 0–100: score each axis 0–10 with a quoted
-justification that cites the SPECIFIC script line AND the decoded card's mechanic, then weight —
-  Hook strength (verbal) 18 · Visual hook 14 · Overlay hook 12 (if identical to spoken, cap at 3) ·
-  Retention/return hook 14 · Share trigger 12 · Owned-proof / account-swap 12 (generic = cap at 4) ·
-  NO-GO compliance 8 (VETO — any breach forces TOTAL = 0) · Length/format fit 5 · Trend traceability 5
-  (must quote a real decoded winner C# from THIS run; invented-from-nothing = 0).
-  PASS BAR: REACH & NURTURE ≥ {{MIN_VIRALITY_SCORE}}; CONVERT/proof ≥ ({{MIN_VIRALITY_SCORE}} minus 5) WITH
-  a real proof point on file (proof reels legitimately trade share-trigger for credibility — do NOT water
-  them down to chase points). Grade all scripts in ONE batched call; only sub-bar scripts re-enter, sent
-  back to the S4 maker with ONLY their failing axes + fix notes + the C# to lean on harder. Best-of-N; stop
-  after {{MAX_REGEN_LOOPS}} rounds or if two rounds fail to gain ≥2 points. If the whole batch stays low,
-  STOP and report "systemic low scores — likely thin/GEO-SKEWED decode; re-run discovery" (fault is
-  upstream). A script still under bar after the cap is HARD-BLOCKED (see NO SILENT DEGRADE).
+used, it needs a finished video). Grade every script 0–100. Score each axis 0–10 with a quoted
+justification that cites the SPECIFIC script line AND the decoded card's mechanic; a bare assertion with no
+quoted line caps that axis at 3. Axes and weights (they sum to 100):
+  Hook strength (verbal) 18 · Visual hook 14 · Overlay hook 12 (identical to the spoken hook → cap 3) ·
+  Retention/return hook 14 (device asserted without a quoted script line → cap 4) · Share trigger 12 (not
+  tied to a named §2.3 trigger with a stated reason a human forwards it → cap 4) · Owned-proof / account-
+  swap 12 · NO-GO compliance 8 (VETO) · Length/format fit 5 · Trend traceability 5 (must quote a real
+  decoded winner C# from THIS run; invented-from-nothing = 0).
+  OWNED-PROOF axis by bucket: CONVERT/proof reels MUST cite a specific owned result (generic/un-owned →
+  cap 4). Format-led REACH/NURTURE reels that legitimately forgo a client number are scored on format-fit +
+  the specificity of the illustrative claim, FLOOR 6 — do not auto-penalise them for lacking owned proof.
+  NO-GO VETO: quote the script's single strongest claim; if it crosses {{NO_GO_TOPICS}} (any guaranteed
+  result / "SEO is dead"-style overclaim) the TOTAL = 0.
+  SCORING FORMULA (use exactly this — no other normalisation): axis_points = (raw 0–10 ÷ 10) × axis_weight;
+  TOTAL = Σ axis_points, out of 100.
+  PASS BAR: proof-led REACH & NURTURE ≥ {{MIN_VIRALITY_SCORE}}; format-led (proof-less) REACH & NURTURE ≥
+  ({{MIN_VIRALITY_SCORE}} minus 3); CONVERT/proof ≥ ({{MIN_VIRALITY_SCORE}} minus 5) WITH a real proof point
+  on file (proof and format reels legitimately trade owned-proof/share-trigger for their own strength — do
+  NOT water them down to chase points). Grade all scripts in ONE batched call; only sub-bar scripts re-enter,
+  sent back to the S4 maker with ONLY their failing axes + fix notes + the C# to lean on harder. Best-of-N;
+  stop after {{MAX_REGEN_LOOPS}} rounds or if two rounds fail to gain ≥2 points. If the whole batch stays low,
+  STOP and report "systemic low scores — likely thin/GEO-SKEWED decode; re-run discovery" (fault is upstream).
+  A script still under bar after the cap is HARD-BLOCKED (see NO SILENT DEGRADE).
 
 DELIVERABLES: once Gate 5 passes and every emitted script is at/above its bar, run the S6 — Storyboard &
-Deliverables prompt for the {{SCRIPTS_TO_WRITE}} approved scripts, honoring {{OUTPUTS_WANTED}}.
+Deliverables prompt (its verbatim text is APPENDED BELOW under "MAKER TEMPLATES") for the
+{{SCRIPTS_TO_WRITE}} approved scripts, honoring {{OUTPUTS_WANTED}}.
 
 FINAL REPORT (concise): per-gate verdicts + repair counts; each script's final score + bucket; actual Apify
 $ spent + item count; which deliverables were produced + their vault paths; any HARD-BLOCK + its reason.
@@ -570,8 +589,12 @@ FOR EACH approved script, produce ONLY the requested sections:
 [generation-prompts] — ONLY if {{OUTPUTS_WANTED}} includes generation-prompts: per-frame image/video
   generation prompts as fenced code blocks, kept separate so a client storyboard isn't polluted with jargon.
 
-FAITHFULNESS GATE (before emitting): every storyboard frame's VO + OVERLAY is a verbatim line from a source
-script row; frame count is 8–10; nothing from the script is missing. Fix any failing frame once, then emit.
+FAITHFULNESS GATE (before emitting) — two directions, like the Beautifier's no-silent-drop rule:
+  (1) FRAME→SOURCE: every frame's VO + OVERLAY is a verbatim line from a source script row.
+  (2) SOURCE→FRAME coverage: enumerate EVERY VO line and EVERY overlay in the source script (plus the CTA /
+      end-card) and assert each appears verbatim in ≥1 frame — nothing vanishes silently. If a script has
+      >10 beats, allow >10 frames OR add a "merged beats X+Y" note so nothing is dropped to hit 8–10.
+  Frame count 8–10 (or a justified >10). Fix any failing frame once, then emit.
 
 VAULT SAVE: save the deliverables to "{{VAULT_FOLDER}}/s9-deliverables.md" (storyboard + designer-doc +
 optional prompts, per reel). Echo the path + link; confirm no duplicate folder.
