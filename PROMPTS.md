@@ -205,6 +205,17 @@ same run you loaded it — if a videoUrl 403s, re-scrape that single reel first;
 the VERBAL/VISUAL/OVERLAY layers for that reel MUST read "UNAVAILABLE — URL expired". Writing a
 transcript or overlay from the caption or topic is FABRICATION and is forbidden.
 
+DECODE-ACTOR HEALTH (check FIRST — the decode actors are third-party and can be expired/renamed/broken):
+  Do a 1-reel probe of each decode actor before decoding the full set. If the transcription actor errors
+  "must rent a paid Actor / free trial expired", the audio engine is DOWN — send the owner the rental link
+  once (or switch to a working transcription actor they provide) and DO NOT proceed on a fabricated
+  transcript. If the Higgsfield video_analysis tool is not callable by name in this session, treat it as
+  unavailable (do not assume it exists). If the visual actor (grizzlygriff/video-llm-analyzer) FAILS, retry
+  once, then mark VISUAL unavailable. If ALL decode paths are down, STOP the decode and report exactly which
+  actor needs fixing (rental or replacement) with its console link — a decode with no working
+  transcription/visual engine produces NOTHING real, so inventing VERBAL/VISUAL/OVERLAY is FORBIDDEN and a
+  "decode blocked — <actor> needs <rental/replacement>" report is the correct, useful answer.
+
 PART 1 — DEEP DECODE — per selected reel, produce a CARD with these four blocks:
 VERBAL (full word-for-word):
   - Default engine = transcription. MCP — donjuan_mime/audio-video-to-text:

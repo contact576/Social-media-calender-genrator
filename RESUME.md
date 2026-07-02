@@ -46,5 +46,16 @@ on the blocked deployment.
 - Open (owner's call): keep the in-app **Beautifier** as the client export (recommended), or productionize
   the `make_report_pdf.py` branded-PDF generator as a first-class export.
 
+## First supervised live run (findings)
+Ran a real Apify scrape on PPC Guru. **Working live:** reel-scraper (baseline), niche-search (discovery),
+deep-scrape + account-relative outlier math (therudransh.sharma median ~13.6k → real 10–161× outliers).
+**Broken live — Gate 3 decode actors:** Whisper `donjuan_mime/audio-video-to-text` free trial EXPIRED
+("must rent a paid Actor"); Higgsfield `video_analysis` not callable by that name in-session; Gemini
+`grizzlygriff/video-llm-analyzer` FAILED (HTTPStatusError, its own backend). No fabrication occurred — the
+anti-fabrication guardrails held. S3 now has a DECODE-ACTOR HEALTH probe that stops-and-reports which actor
+needs rental/replacement rather than inventing. **To finish a live decode:** rent Whisper (~$5/mo) OR swap
+in a currently-free transcription actor + an alternative visual/frames actor (test when Apify is stable).
+Total run spend: ~0.05 Apify compute units (well under the $5 cap).
+
 ## How to continue
 Edit `PROMPTS.md` → `python3 inject_prompts.py` → `node selftest.mjs` → commit → merge to `main` (auto-deploys).
