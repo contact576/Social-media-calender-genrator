@@ -15,7 +15,10 @@
 > S4→`s6-calendar`+`s7-scripts`; S5→`s8-report`+`s8b-learning-loop`.
 >
 > **Proven actors (VALIDATION_REPORT.md + live re-verify 2026-07):** profile/reels + medians =
-> `apify/instagram-reel-scraper`; niche keyword search = `data-slayer/instagram-search-reels`;
+> `apify/instagram-reel-scraper`; hashtag discovery (RELIABLE backbone, ~99.7%) =
+> `apify/instagram-hashtag-scraper` (`hashtags` array + `resultsType:"reels"` + `resultsLimit`);
+> keyword search = `data-slayer/instagram-search-reels` (free but INCONSISTENT per query — bonus, not
+> backbone);
 > transcription = `apple_yang/instagram-transcripts-scraper` (input `videoUrl` = the reel PAGE url,
 > not the CDN url; Whisper `donjuan_mime/audio-video-to-text` is a paid-rental fallback only);
 > visual/overlay = `grizzlygriff/video-llm-analyzer` (best-effort, ~68% success — retry once, then
@@ -117,9 +120,13 @@ DISCOVERY INPUTS
 [[IF COMPETITOR_HANDLES]]- Force-include these competitor handles as seeds: {{COMPETITOR_HANDLES}}[[ENDIF]]
 
 SEARCH-ACTOR HEALTH (check FIRST): probe data-slayer/instagram-search-reels with ONE known-fat query
-({ "query": "fitness", "maxPages": 1 }). An error or 0 items means the SEARCH ACTOR itself is
-broken/renamed — STOP and report it (console: https://console.apify.com/actors, search
-"instagram-search-reels") instead of mistaking a dead actor for a thin niche.
+({ "query": "fitness", "maxPages": 1 }). NOTE (live-verified 2026-07): this free keyword actor is
+INCONSISTENT per query — it returns "fitness" but 0 items for many equally-large niches (e.g. "botox",
+"skincare", "medspa"). So a 0 on your niche keyword does NOT mean the niche is thin. The RELIABLE
+discovery engine is the hashtag leg below (`apify/instagram-hashtag-scraper`, ~99.7% success); treat the
+keyword actor as a bonus, not the backbone. Only if BOTH the keyword probe AND a "fitness" hashtag pull
+return nothing is the account layer actually broken — then STOP and report it (console:
+https://console.apify.com/actors).
 
 PART 1 — DISCOVERY FUNNEL
 PHASE A — WIDE NET (run ALL legs, then print the RUN RECEIPT below).
@@ -137,11 +144,16 @@ PHASE A — WIDE NET (run ALL legs, then print the RUN RECEIPT below).
      "<keyword> <city>" and "<keyword> <country>" as their own queries through the same actor
      ({ "maxPages": 1 } each). Tag results "GEO". Zero/weak GEO results are a FINDING (the local market
      is thin on IG), not a failure — report them, never pad.
-   Leg 2 — HASHTAGS (always run, even if the hashtag field is empty): use the operator hashtags above
-     if present; otherwise DERIVE 6–10 mid-size (target ~100k–1M posts — best-effort, sizes aren't
-     verifiable from the search data, so don't claim them as verified) niche hashtags for {{NICHE}},
-     and run EACH as its own query through the same actor (a "#tag" string is a valid query). Do NOT
-     skip this leg — it is core to the wide net.
+   Leg 2 — HASHTAGS (the RELIABLE backbone — always run): use the operator hashtags above if present;
+     otherwise DERIVE 6–10 mid-size (target ~100k–1M posts — best-effort, sizes aren't verifiable, so
+     don't claim them as verified) niche hashtags for {{NICHE}}, including geo-tagged ones (e.g.
+     #austinmedspa, #medspahouston). Run them through MCP — apify/instagram-hashtag-scraper (official,
+     ~99.7% success, live-verified): { "hashtags": [<tags without #>], "resultsType": "reels",
+     "resultsLimit": 12 }. It returns clean fields (ownerUsername, videoPlayCount, likesCount,
+     videoUrl, locationName, caption, hashtags) and — unlike the keyword actor — reliably surfaces
+     on-niche, geo-relevant creators. This leg is the core of the wide net; do NOT skip it.
+     FALLBACK: if Leg 1/1b (keyword actor) came back sparse or empty, that's expected — lean on this
+     leg and add more geo + sub-service hashtags rather than declaring the niche thin.
    Leg 3 — ADJACENT: run each ADJACENT keyword the same way and TAG those results "ADJACENT".
 [[IF COMPETITOR_HANDLES]]   Leg 4 — SEEDS: also pull the force-include handles via
      apify/instagram-reel-scraper ({ "username": [<handles>], "resultsLimit": 12,
