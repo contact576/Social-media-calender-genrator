@@ -48,11 +48,17 @@ That's it. The "System check" tab is for developers; you only touch it if a red 
 
 - **An actor says "rent the actor" / "approve permissions"** — copy the link it shows to the owner; they
   click it once in the Apify console, then re-run that prompt.
-- **Whisper transcription says its free trial expired** (`donjuan_mime/audio-video-to-text`) — you have
-  two options: (a) rent it for **$5/mo** in the Apify console, or (b) let **Higgsfield `video_analysis`**
-  do the verbal layer instead — it transcribes **and** translates (great for Hindi/Hinglish reels). The
-  S4 prompt already tells the chat to fall back to Higgsfield; nothing breaks, the transcript just comes
-  from Higgsfield.
+- **Transcription problems** — the default engine is `apple_yang/instagram-transcripts-scraper`
+  (live-verified: multilingual incl. Hindi/Hinglish, ~$0.002/reel, ~99% success; it takes the reel's
+  *page* URL, not the CDN link). If it ever errors, the paid fallback is renting Whisper
+  (`donjuan_mime/audio-video-to-text`, ~$5/mo in the Apify console) — its free trial is expired. The
+  prompts already carry a health probe that stops and tells you which engine needs attention instead of
+  inventing a transcript.
+- **The visual/frame layer fails** (`grizzlygriff/video-llm-analyzer`) — it succeeds only ~68% of the
+  time (server-side flakiness). The prompt retries once, then honestly marks VISUAL/OVERLAY
+  "unavailable" and continues on the verbal + packaging layers. There is currently no reliable
+  alternative frame-analysis actor in the Apify Store; Higgsfield `video_analysis` is NOT callable
+  through the connector despite what older docs said.
 - **A video link gives a 403 / "expired"** — re-scrape that single reel in the same chat before decoding
   it. Never let the model write a transcript from the caption.
 - **A later step says a vault file is missing** — go back and confirm the earlier step actually saved to
@@ -64,11 +70,11 @@ That's it. The "System check" tab is for developers; you only touch it if a red 
 
 - **Apify** (scraping) is pay-as-you-go and cheap: a full client research run is ~**$2–6** of Apify
   (the PPC Guru rehearsal cost **under $1**). Discovery/median scrapes are a few cents each.
-- **Whisper actor:** flat **$5/month** if you choose to rent it (optional — Higgsfield covers the verbal
-  layer for free).
-- **Higgsfield `video_analysis` (the decode/transcription we use) costs 0 credits** — verified against an
-  unchanged credit balance and an empty transaction log. **Only Higgsfield video *generation*** (your
-  separate AI-avatar production: Seedance/Kling/Nano-Banana) spends credits. The Decoder never generates.
+- **Transcription** (`apple_yang/instagram-transcripts-scraper`): ~**$0.002 per reel** — a rounding
+  error inside the Apify budget. The optional Whisper fallback is a flat **$5/month** rental.
+- **Higgsfield spends nothing here** — the Decoder never generates images or video (storyboards are
+  emitted as text prompts you render elsewhere), and the old "Higgsfield does the decode for free"
+  note is obsolete: its `video_analysis` tool is not callable through the connector at all.
 - **The dashboard + Beautifier:** $0 — static page, no accounts, no calls.
 - Guardrail: ask the owner before any single scrape run is expected to exceed **$5 / 1,500 items**.
 
