@@ -57,5 +57,15 @@ needs rental/replacement rather than inventing. **To finish a live decode:** ren
 in a currently-free transcription actor + an alternative visual/frames actor (test when Apify is stable).
 Total run spend: ~0.05 Apify compute units (well under the $5 cap).
 
+## Commercialization hardening pass (2026-07-03)
+A four-track audit (architecture / pipeline / UX / legal+economics) drove a full hardening pass:
+geo-balanced discovery (GEO leg + ORIGIN buckets + MARKET MIX quota — fixes the "all winners were
+India-based" skew), output-language enforcement, PROOF_ASSETS intake field + grader NO-PROOF rule,
+autonomous-mode coherence (grader write-back, BLOCKED stamps, RESUME rule, budget-derived item cap,
+protected visual spend), thin-niche gates (search-actor probe, keyword EXPAND, minimum-pool gate),
+and a customer-grade UI (setup checklist, cost disclosure, Done-when lines, a11y). Higgsfield is no
+longer required anywhere. **`COMMERCIALIZATION.md` is the decision doc**: model A ($349 report) now →
+C (agency license) → B (SaaS) later, plus the legal checklist and the P0–P8 build plan.
+
 ## How to continue
 Edit `PROMPTS.md` → `python3 inject_prompts.py` → `node selftest.mjs` → commit → merge to `main` (auto-deploys).

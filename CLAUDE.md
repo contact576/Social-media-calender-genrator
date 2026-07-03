@@ -6,7 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A **single-file, keyless, static web app** (`index.html`) — the "SMM Virality Decoder". It turns an
 intake form into five copy-paste prompts (S1–S5) that an operator runs in a *separate* Claude chat
-that has the Apify / Higgsfield / Google Drive connectors. (The chain was condensed from eight steps to
+that has the Apify + Google Drive connectors (Higgsfield is NOT required — the pipeline generates
+nothing and its `video_analysis` tool is not callable anyway). (The chain was condensed from eight steps to
 five by fusing tightly-coupled stages — discovery+ranking, decode+synthesis, calendar+scripts — so the
 operator pastes fewer times; the same nine vault files are still produced.) The dashboard itself makes **no network
 calls, holds no API keys, and has no build step** — it only generates text. The actual scraping/decode
@@ -64,8 +65,13 @@ The step list is derived once as `STEPS = Object.keys(RAW).sort()` — do not re
 **Intake specifics that the templates depend on:** `CLIENT_HANDLE` is **optional** — S1 branches on it
 (`ESTABLISHED` account computes a baseline median; `NEW/THIN` account, i.e. no handle or <10 reels, skips
 the baseline since S2's outlier math uses each *discovered* account's own median). A single
-`ADDITIONAL_NOTES` catch-all field carries voice/proof/pillars (older per-topic fields were removed). S5's
-learning loop is guarded by `[[IF CLIENT_HANDLE]]`.
+`ADDITIONAL_NOTES` catch-all field carries voice/pillars, and an optional `PROOF_ASSETS` field carries
+owned results — S4 builds CONVERT slots only from it, and the grader's NO-PROOF CLIENT RULE re-weights
+(instead of hard-blocking) when it's empty. S5's learning loop is guarded by `[[IF CLIENT_HANDLE]]`.
+Discovery is geo-balanced: S2 runs a GEO query leg off `GEO_PRIMARY`, buckets origins
+(TARGET-MARKET/CULTURE-MATCH/GLOBAL), and enforces a MARKET MIX quota (≥5 or an honest SHORTFALL) —
+don't remove these when editing S2; they exist because generic keyword search returns the biggest
+global-English creators regardless of the client's market.
 
 **The 5-step → vault-file map:** S1→`s1-baseline`; **S2 (Discover & Rank)**→`s2-discovery`+`s3-outliers`;
 **S3 (Decode & Synthesize)**→`s4-decode`+`s5-patterns`; **S4 (Plan & Script)**→`s6-calendar`+`s7-scripts`;
