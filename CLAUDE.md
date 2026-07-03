@@ -15,12 +15,17 @@ fetch/API calls or a bundler to `index.html`.
 
 **Two run modes (a toggle on the Intake tab, `localStorage.smm_mode`, default `chat`):**
 - **Claude chat** — the default: emits the **five** copy-paste prompts (S1–S5), pasted one-by-one.
-- **Claude Code** — emits **one** "auto-run" prompt (the **ORCHESTRATOR** template) the operator pastes into a
-  Claude Code session; it runs the whole S1→S5 pipeline autonomously (maker→blind-checker at each gate, a
-  bounded regenerate ladder, a virality grader that loops scripts to ≥90 / ≥85 for CONVERT, a self-capping
-  Apify budget, then the **S6** deliverables: an 8–10 frame storyboard emitted as image-gen *prompts* — no
-  images generated, zero credits — plus a designer doc and optional generation prompts). The dashboard still
-  only generates text; the autonomy happens in the connected Claude Code session.
+- **Claude Code** — emits **one** "auto-run" prompt the operator pastes into a Claude Code session: the
+  **ORCHESTRATOR** template **plus the fully-rendered S1–S5 and S6 maker templates appended below it**
+  (`generate()`'s `CURRENT_MODE==='code'` branch does the bundling — the pasted prompt must stay
+  self-contained, since a Claude Code session can't fetch the templates). It runs the whole S1→S5 pipeline
+  autonomously (maker→blind-checker at each gate, a bounded AUGMENT→REVAMP→REGENERATE ladder, an
+  item-count-first budget governor, a hard NO-SILENT-DEGRADE block), grades every script with a
+  weighted-rubric LLM judge — **tiered pass bars: proof-led REACH/NURTURE ≥ `MIN_VIRALITY_SCORE`,
+  format-led (proof-less) ≥ MIN−3, CONVERT ≥ MIN−5** — then runs the **S6** deliverables: an 8–10 frame
+  storyboard emitted as image-gen *prompts* (no images generated, zero credits) + a designer doc +
+  optional generation prompts, with a two-way (frame↔source) faithfulness gate. The dashboard still only
+  generates text; the autonomy happens in the connected Claude Code session.
 
 ## The one architecture rule that matters: PROMPTS.md is the source of truth
 
@@ -78,15 +83,16 @@ link hrefs are scheme-whitelisted. Keep these guarantees if you touch the render
 ## Verify after every change
 
 ```bash
-node selftest.mjs          # engine + reconciler + PROMPTS.md parity + validation + beautifier (~45 checks, no deps)
+node selftest.mjs          # engine + reconciler + parity (all 7 templates) + validation + grader/QC guards + beautifier (~62 checks, no deps)
 python3 inject_prompts.py  # re-embed templates into index.html after editing PROMPTS.md
 ```
 
 DOM-level render test (catches UI-wiring bugs) needs jsdom, which is not vendored:
 ```bash
 cd /tmp && mkdir -p jsdomtest && (cd jsdomtest && npm install jsdom --no-save)
-# then run a JSDOM script that loads index.html with runScripts:'dangerously' and drives the buttons,
-# resolving jsdom via createRequire('/tmp/jsdomtest/x.js')
+# then run a JSDOM script that loads index.html with runScripts:'dangerously' (stub window.confirm),
+# resolving jsdom via createRequire('/tmp/jsdomtest/x.js'). Assert: chat mode → 5 stepcards; code mode →
+# 1 card whose text contains "MAKER TEMPLATES" + all of S1–S6; no leftover {{ }}/[[ ]] in either mode.
 ```
 There is no test framework; `selftest.mjs` is a flat list of `ok(name, condition)` assertions — to run
 a "single test", comment out the others or read the labelled PASS/FAIL lines. To preview the app, just
@@ -100,19 +106,26 @@ the pipeline:
   NOT competitor-handle-first. Competitor handles are optional force-include seeds.
 - Outlier score = reel plays ÷ **that account's own median** (≥5× = outlier, ≥20× = priority) — raw
   play-count alone is misleading. S2 (Discover & Rank, Part 2) always scrapes each surfaced winner's own account for the median.
-- Actor input keys are exact: transcription `donjuan_mime/audio-video-to-text` uses **`source_url`**
-  (fed by the scraper's `videoUrl` output) with `model:"small"` (not `base`); reels/profiles use
-  `apify/instagram-reel-scraper` (`username` array, `resultsLimit`, `skipPinnedPosts`); visual layer is
-  Higgsfield `video_analysis` (call `media_import_url` first) + `grizzlygriff/video-llm-analyzer`
-  (`framesToExtract` 4–6 to avoid a 413). Non-English/music reels route to Higgsfield, which translates.
+- Actor input keys are exact: reels/profiles use `apify/instagram-reel-scraper` (`username` array,
+  `resultsLimit`, `skipPinnedPosts`); niche search is `data-slayer/instagram-search-reels`
+  (`query`+`maxPages`, ~12 reels/page).
 - `get-dataset-items`: fetch full items and `omit` bulky blocks; never `fields=` on nested arrays (it
-  silently drops them).
-- **Whisper's free trial can expire** ("you must rent a paid Actor"); the chain falls back to Higgsfield
-  `video_analysis`, which transcribes **and** translates. Verified during the Phase 6 run.
-- **Higgsfield `video_analysis` / `media_import_url` cost 0 credits** (confirmed against an unchanged
-  balance + empty transaction log). Only Higgsfield *generation* (Seedance/Kling/Nano-Banana) spends
-  credits; the Decoder never generates. The `grizzlygriff` Gemini actor runs in `analysisMode:"frames"`
-  (images only) — it does NOT transcribe audio; use Higgsfield or Whisper for the spoken track.
+  silently drops them). Search-actor items are huge — always project with `fields=`.
+- **Decode-actor status (live-verified 2026-07; S3 carries a DECODE-ACTOR HEALTH probe for exactly this):**
+  - **Transcription default = `apple_yang/instagram-transcripts-scraper`** — input
+    `{ "videoUrl": "https://www.instagram.com/reel/<shortCode>/" }` (the reel *page* URL, not the CDN
+    `videoUrl`). Proven live: multilingual incl. Hinglish→Hindi, timestamped `segments`, ~$0.002/reel,
+    ~99% success. Whisper `donjuan_mime/audio-video-to-text` (`source_url` = CDN URL, `model:"small"`)
+    is now a **paid fallback only** — its free trial expired live ("you must rent a paid Actor").
+  - **Visual/overlay layer is best-effort:** `grizzlygriff/video-llm-analyzer` (`framesToExtract` 4–6 to
+    avoid a 413) is the *only* multimodal frame analyzer in the Apify Store and is flaky (~68% success,
+    recurring server-side HTTPStatusError). Retry once, then mark VISUAL/OVERLAY "unavailable" and proceed
+    on VERBAL+PACKAGING. Higgsfield `video_analysis`/`media_import_url` are **not callable by those names**
+    through the current connector — treat as absent (they appear in older docs as a 0-credit fallback).
+  - Never fabricate a missing layer from the caption/topic; if the verbal engine is *also* down, S3
+    STOPs and reports which actor needs rental/replacement.
+- Higgsfield *generation* (Seedance/Kling/Nano-Banana) spends credits; the Decoder never generates —
+  storyboards are emitted as image-gen prompts the operator renders externally.
 
 ## Phase-gate workflow (read before doing project work)
 
@@ -120,9 +133,10 @@ This is a **gated build** governed by `KICKOFF_PROMPT.md` (process) + `BLUEPRINT
 rule is strict: do the numbered phase, end it with a QC pass by **blind fresh-eyes subagents** (given
 the artifact + the relevant spec, NOT your reasoning), present a review package, then **STOP and wait
 for the owner's explicit approval** before the next phase. Never start two phases in one turn. Commit at
-each gate; push only after approval. **Status: Phases 0–7 complete** — brief, live validation,
-architecture, prompt chain, dashboard, Beautifier, a real PPC-Guru end-to-end run, README + Vercel
-deploy. The build is shipped; further work is maintenance/v2 (see README roadmap). Keep the gate
+each gate; push only after approval. **Status: shipped and live** — Phases 0–7 (brief → PPC-Guru
+end-to-end run → deploy), then the 8→5-step condense, the autonomous Claude-Code mode (QC-calibrated
+grader + storyboard deliverables), and a supervised live run that validated scrape/rank and hardened the
+decode-actor layer. Further work is maintenance/v2 (see README roadmap + `RESUME.md`). Keep the gate
 discipline for any substantial new phase.
 
 Cost guardrail for any phase that scrapes: ask the owner before a run exceeds ~$3 total / $5 per run /
@@ -135,8 +149,10 @@ Cost guardrail for any phase that scrapes: ask the owner before a run exceeds ~$
 - `PROJECT_BRIEF.md` — pilot client (PPC Guru) facts + verified environment inventory.
 - `VALIDATION_REPORT.md` — proven actor names/input-keys/costs (Phase 1, real data).
 - `ARCHITECTURE.md` — the dashboard design spec (intake fields, S1–S5 spec, vault map).
-- `PROMPTS.md` — **canonical** S1–S5 templates. `SAMPLE_PROMPTS_PPCGURU.md` — a rendered pilot sample (legacy 8-step; illustrative only).
+- `PROMPTS.md` — **canonical** templates: S1–S5 + `## ORCHESTRATOR` + `## S6`. `SAMPLE_PROMPTS_PPCGURU.md` — a rendered pilot sample (legacy 8-step; illustrative only).
+- `RESUME.md` — the session-handoff note: current status, live-run findings, open items. Read it after this file.
 - `index.html` — the app. `inject_prompts.py` / `selftest.mjs` — build + test helpers (not shipped to the operator).
+- `PPC_GURU_FINAL_REPORT.md/.html/.pdf` + `make_report_pdf.py` — the pilot deliverable and its branded-PDF generator (fpdf2; stubs the sandbox's broken `cryptography` import).
 - `README.md` — operator quick-start + troubleshooting + cost notes + v2 roadmap. (The Drive "vault" with
   the PPC-Guru `s1`–`s8b` decode/scripts/report lives in Google Drive, not the repo.)
 
@@ -144,5 +160,13 @@ Cost guardrail for any phase that scrapes: ask the owner before a run exceeds ~$
 
 `main` is **production**: the repo is connected to Vercel, which **auto-deploys `index.html` on every push
 to `main`**. Develop on a feature branch, open a PR, then **merge to `main` to ship** (that triggers the
-deploy — there is no separate deploy step). This sandbox's network policy blocks `vercel.app`, so the live
-URL can't be fetched from here; verify deploys from the Vercel dashboard / a real browser.
+deploy — there is no separate deploy step).
+
+**Deploy-author gotcha (cost three blocked releases — read this):** Vercel **BLOCKs** a production
+deployment when the `main` commit's GitHub author is `contact576` (not a linked Vercel contributor), but
+deploys commits authored by "Claude" fine. A **squash merge re-attributes the commit to `contact576` →
+BLOCKED**; a **rebase merge preserves the Claude author → deploys clean**. So: rebase-merge PRs, or fix it
+permanently by adding `contact576` as a Vercel team member (else click Redeploy on the blocked deployment).
+Verify deploys via the Vercel MCP tools (`list_deployments` — the newest `target:"production"` entry must be
+`READY`, not `BLOCKED`) or the Vercel dashboard; a stale browser cache also hides fresh deploys, so
+hard-refresh before concluding a deploy "didn't work".
