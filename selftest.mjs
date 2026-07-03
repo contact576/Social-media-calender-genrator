@@ -56,7 +56,7 @@ const s1=api.generatePrompt('S1', vals, RAW), s2=api.generatePrompt('S2', vals, 
 
 // S2 — Discover & Rank: discovery legs + origin capture + outlier ranking + cost gate
 ok('S2 strips empty COMPETITOR_HANDLES leg', !/Force-include these competitor handles/.test(s2));
-ok('S2 keeps mandatory hashtag leg', /Leg 2 — HASHTAGS \(always run/.test(s2));
+ok('S2 keeps mandatory hashtag leg on the reliable actor', /Leg 2 — HASHTAGS \(the RELIABLE backbone — always run/.test(s2) && /apify\/instagram-hashtag-scraper/.test(s2));
 ok('S2 records account origin (geo/language)', /RECORD its ORIGIN/.test(s2));
 ok('S2 ranks with an origin column', /origin \(geo\/lang\)/.test(s2));
 ok('S2 carries the scrape cost guardrail', /COST GUARDRAIL/.test(s2));
