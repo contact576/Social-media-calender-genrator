@@ -206,25 +206,32 @@ the VERBAL/VISUAL/OVERLAY layers for that reel MUST read "UNAVAILABLE — URL ex
 transcript or overlay from the caption or topic is FABRICATION and is forbidden.
 
 DECODE-ACTOR HEALTH (check FIRST — the decode actors are third-party and can be expired/renamed/broken):
-  Do a 1-reel probe of each decode actor before decoding the full set. If the transcription actor errors
-  "must rent a paid Actor / free trial expired", the audio engine is DOWN — send the owner the rental link
-  once (or switch to a working transcription actor they provide) and DO NOT proceed on a fabricated
-  transcript. If the Higgsfield video_analysis tool is not callable by name in this session, treat it as
-  unavailable (do not assume it exists). If the visual actor (grizzlygriff/video-llm-analyzer) FAILS, retry
-  once, then mark VISUAL unavailable. If ALL decode paths are down, STOP the decode and report exactly which
-  actor needs fixing (rental or replacement) with its console link — a decode with no working
-  transcription/visual engine produces NOTHING real, so inventing VERBAL/VISUAL/OVERLAY is FORBIDDEN and a
-  "decode blocked — <actor> needs <rental/replacement>" report is the correct, useful answer.
+  Do a 1-reel probe of each decode actor before decoding the full set.
+  - VERBAL/transcription: default `apple_yang/instagram-transcripts-scraper` (proven working). If it ever
+    errors, fall back to a rented `donjuan_mime/audio-video-to-text` (paid) or another working transcription
+    actor — never proceed on a fabricated transcript.
+  - VISUAL/on-screen-text: `grizzlygriff/video-llm-analyzer` is the only Apify multimodal frame analyzer and
+    it is FLAKY (~68% success / often HTTPStatusError). Retry once; if it still fails, mark VISUAL + OVERLAY
+    "unavailable — visual actor down" and proceed on VERBAL + PACKAGING (the decode is still useful). The
+    old Higgsfield `video_analysis` fallback is NOT callable by that name in-session — treat it as absent.
+  - If the VERBAL engine is also down (so there is no working decode engine at all), STOP the decode and
+    report exactly which actor needs fixing (rental/replacement) with its console link. Inventing
+    VERBAL/VISUAL/OVERLAY from the caption/topic is FORBIDDEN — a "decode blocked — <actor> needs
+    <rental/replacement>" report is the correct, useful answer.
 
 PART 1 — DEEP DECODE — per selected reel, produce a CARD with these four blocks:
 VERBAL (full word-for-word):
-  - Default engine = transcription. MCP — donjuan_mime/audio-video-to-text:
-    { "source_url": "<the reel's videoUrl>", "model": "small" }   (use `small`, NOT `base`.)
-  - STATE the detected language + a confidence note BEFORE trusting any transcript. IF the reel is
-    non-English / music-only / heavy text-on-screen: Whisper output is INADMISSIBLE — use Higgsfield
-    video_analysis (it transcribes AND translates) or mark "no reliable verbal". Auto-detecting English
-    on a visibly non-English reel is a FAILURE. STATE which engine produced the verbal layer. If there is
-    no speech at all, write "no spoken track — message carried by overlay/visual".
+  - DEFAULT engine = transcription. MCP — apple_yang/instagram-transcripts-scraper (PROVEN LIVE 2026-07:
+    IG-native, multilingual incl. Hindi/Hinglish, ~$0.001–0.003/min, ~99% success, returns `text` +
+    timestamped `segments`): { "videoUrl": "https://www.instagram.com/reel/<shortCode>/" }.
+    FALLBACK (needs a PAID rental — its free trial expires; only if you have rented it):
+    donjuan_mime/audio-video-to-text { "source_url": "<the reel's videoUrl>", "model": "small" }.
+  - STATE the detected language + a confidence note BEFORE trusting any transcript. The default engine
+    transcribes non-English natively; if the reel is non-English, translate the transcript and KEEP the
+    original too. If the transcript is empty/garbled or all engines are down, mark "no reliable verbal"
+    (never auto-detect English on a visibly non-English reel — that is a FAILURE). STATE which engine
+    produced the verbal layer. If there is no speech at all, write "no spoken track — message carried by
+    overlay/visual".
   - Capture: spoken hook (first ≤2s), structure beats, payoff, CTA.
 VISUAL (MANDATORY on at least the top 10 outliers — it is the ONLY source for the visual-hook channel
   the scripts require; skipping it for all reels INVALIDATES the script step, so say so loudly if you
