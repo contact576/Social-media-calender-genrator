@@ -114,56 +114,51 @@ CLIENT CONTEXT
 - Geo: {{GEO_PRIMARY}} · Language: {{LANGUAGE_PRIMARY}}[[IF LANGUAGE_SECONDARY]] / {{LANGUAGE_SECONDARY}}[[ENDIF]]
 
 DISCOVERY INPUTS
-- Niche search keywords (run one search PER keyword): {{NICHE_KEYWORDS}}
+- Niche terms (seed the hashtag derivation + the bonus keyword leg): {{NICHE_KEYWORDS}}
 [[IF NICHE_HASHTAGS]]- Niche hashtags (prefer mid-size, 100k–1M posts): {{NICHE_HASHTAGS}}[[ENDIF]]
-- Adjacent-niche keywords (for format transplant — keep these separate): {{ADJACENT_KEYWORDS}}
+- Adjacent niches (for format transplant — seed adjacent hashtags/accounts): {{ADJACENT_KEYWORDS}}
 [[IF COMPETITOR_HANDLES]]- Force-include these competitor handles as seeds: {{COMPETITOR_HANDLES}}[[ENDIF]]
 
-SEARCH-ACTOR HEALTH (check FIRST): probe data-slayer/instagram-search-reels with ONE known-fat query
-({ "query": "fitness", "maxPages": 1 }). NOTE (live-verified 2026-07): this free keyword actor is
-INCONSISTENT per query — it returns "fitness" but 0 items for many equally-large niches (e.g. "botox",
-"skincare", "medspa"). So a 0 on your niche keyword does NOT mean the niche is thin. The RELIABLE
-discovery engine is the hashtag leg below (`apify/instagram-hashtag-scraper`, ~99.7% success); treat the
-keyword actor as a bonus, not the backbone. Only if BOTH the keyword probe AND a "fitness" hashtag pull
-return nothing is the account layer actually broken — then STOP and report it (console:
-https://console.apify.com/actors).
+DISCOVERY ENGINES (live-verified 2026-07 — all COOKIELESS; keyword reel-search is DEAD, do not build on it):
+Instagram's real keyword search needs a logged-in session, so the free cookieless keyword actors return
+niche terms INCONSISTENTLY (live: "fitness"/"dentist"/"food" returned reels, but "botox"/"skincare"/"medspa"/
+"med spa austin" all returned 0 on BOTH keyword actors). A 0 there is the actor, NOT a thin niche. Discovery
+therefore runs on a MESH of reliable vectors (hashtag + place + accounts + snowball), not keyword search.
 
 PART 1 — DISCOVERY FUNNEL
-PHASE A — WIDE NET (run ALL legs, then print the RUN RECEIPT below).
-   Leg 0 — EXPAND (protects weak keyword lists): from {{NICHE}}, {{SERVICES}}, {{ICP}} and
-     {{GEO_PRIMARY}}, derive 3–5 ADDITIONAL search phrases a real viewer would type (tag "DERIVED") and
-     run them as Leg-1 queries too. If the operator's ADJACENT list has <2 usable entries, also derive
-     2–3 adjacent niches from the ICP yourself (tag "DERIVED-ADJACENT").
-   Leg 1 — KEYWORDS: for EACH niche keyword, MCP — data-slayer/instagram-search-reels:
-     { "query": "<keyword>", "maxPages": 2 }  (≈12 reels/page, ~24/keyword; run SEPARATELY per keyword.)
-   Leg 1b — GEO (always run — this fixes the global-English skew): Instagram keyword search is NOT
-     location-aware (the actor takes only query+maxPages and runs from a datacenter), so generic queries
-     rank by WORLDWIDE engagement and surface the biggest global-English creators, not {{GEO_PRIMARY}}
-     ones. Derive the market's search terms from "{{GEO_PRIMARY}}" (city + region + country — e.g.
-     "Toronto" → toronto / ontario / canada) and for EACH of the top 3 niche keywords run
-     "<keyword> <city>" and "<keyword> <country>" as their own queries through the same actor
-     ({ "maxPages": 1 } each). Tag results "GEO". Zero/weak GEO results are a FINDING (the local market
-     is thin on IG), not a failure — report them, never pad.
-   Leg 2 — HASHTAGS (the RELIABLE backbone — always run): use the operator hashtags above if present;
-     otherwise DERIVE 6–10 mid-size (target ~100k–1M posts — best-effort, sizes aren't verifiable, so
-     don't claim them as verified) niche hashtags for {{NICHE}}, including geo-tagged ones (e.g.
-     #austinmedspa, #medspahouston). Run them through MCP — apify/instagram-hashtag-scraper (official,
-     ~99.7% success, live-verified): { "hashtags": [<tags without #>], "resultsType": "reels",
-     "resultsLimit": 12 }. It returns clean fields (ownerUsername, videoPlayCount, likesCount,
-     videoUrl, locationName, caption, hashtags) and — unlike the keyword actor — reliably surfaces
-     on-niche, geo-relevant creators. This leg is the core of the wide net; do NOT skip it.
-     FALLBACK: if Leg 1/1b (keyword actor) came back sparse or empty, that's expected — lean on this
-     leg and add more geo + sub-service hashtags rather than declaring the niche thin.
-   Leg 3 — ADJACENT: run each ADJACENT keyword the same way and TAG those results "ADJACENT".
-[[IF COMPETITOR_HANDLES]]   Leg 4 — SEEDS: also pull the force-include handles via
-     apify/instagram-reel-scraper ({ "username": [<handles>], "resultsLimit": 12,
-     "skipPinnedPosts": true }) and tag "SEED".[[ENDIF]]
-   Pool all results. Fetch full items with `omit`; if a query returns 0, report "0 results" and
-   continue (not fatal). HARD CAPS — do NOT raise them, report a shortfall instead: maxPages = 2 per
-   query; total pool ≈ 150–220 reels (the GEO leg adds ~6 one-page queries).
-   RUN RECEIPT (mandatory): a table — query | type (keyword/geo/hashtag/adjacent/seed) | ran y/n | pages |
-   reels returned. The funnel is INVALID if any keyword/hashtag/adjacent query lacks a row; if you ran
-   fewer searches than queries, STOP and say so.
+PHASE A — WIDE NET (run legs A–D always; E/F when applicable; then print the RUN RECEIPT).
+   Leg A — HASHTAG (reliable backbone, ~99.7%): derive 6–12 niche hashtags INCLUDING geo-fused ones
+     (#<niche>, #<niche><city>, #<service><city> — e.g. #medspa, #medspaaustin, #botoxaustin); use the
+     operator hashtags if given. MCP — apify/instagram-hashtag-scraper:
+     { "hashtags": [<tags without #>], "resultsType": "reels", "resultsLimit": 12 }.
+     Returns FRESH reels + ownerUsername (feeds the account pool), videoPlayCount, timestamp, locationName,
+     musicInfo.audio_id (feeds the AUDIO leg in PART 2). Run BOTH bare-niche tags (global format teachers,
+     transplantable) AND geo-fused tags (in-market creators). Hashtag usage is declining on new posts, which
+     is exactly why it is a SEED, never the sole engine.
+   Leg B — PLACE (the LOCAL spine — run whenever {{GEO_PRIMARY}} names a city/region; SKIP + note for a
+     global/no-city client): MCP — apify/instagram-scraper { "search": "<niche> <city>",
+     "searchType": "place", "searchLimit": 10, "resultsType": "details" } → real in-market businesses with
+     location_id + ig_business.profile.username (live: "austin med spa" → It's A Secret Med Spa-Austin,
+     Austin Laser Med Spa, Fountain of Youth Med Spa Austin). Add each returned username to the account pool;
+     then optionally pull reels tagged at the top location_ids: apify/instagram-scraper
+     { "directUrls": ["https://www.instagram.com/explore/locations/<location_id>/"], "resultsType": "reels",
+     "resultsLimit": 10 }. Everything here is geo-guaranteed → auto-buckets TARGET-MARKET and anchors the
+     MARKET-MIX floor.
+   Leg C — ACCOUNTS (geo-MANDATORY): MCP — apify/instagram-scraper { "search": "<niche> <geo>",
+     "searchType": "user", "searchLimit": 10, "resultsType": "details" }. ALWAYS append a geo/language term —
+     bare "<niche>" returns worldwide accounts (live: "med spa" → Poland/Spain/Bulgaria). Re-read each
+     returned profile's origin before trusting its bucket. Also exposes relatedProfiles for Leg D.
+   Leg D — SNOWBALL (enrichment only, silent-skip): for the top ~8 seed accounts read profile-details and
+     collect relatedProfiles + tagged users + reel co-authors to grow the pool ONE hop. If it returns little
+     (common cookieless), proceed on A–C with NO failure — never let recall depend on this leg.
+[[IF COMPETITOR_HANDLES]]   Leg E — SEEDS: add the force-include handles {{COMPETITOR_HANDLES}} to the account pool.[[ENDIF]]
+   Leg F — KEYWORD (BONUS, expect nothing): optionally try data-slayer/instagram-search-reels
+     { "query": "<niche keyword>", "maxPages": 1 } — keep anything it returns, but EXPECT 0 for most niches
+     and NEVER read a 0 here as a thin niche.
+   Pool all reels + all discovered usernames. Fetch full items with `omit`. HARD CAP: total pool ≈ 150–220
+   reels; report a shortfall, never raise the cap.
+   RUN RECEIPT (mandatory): a table — leg | query/tag/place | ran y/n | results returned. The funnel is
+   INVALID if any of legs A–C lacks a row (B may be an honest "SKIPPED — non-geo client").
 PHASE B — MECHANICAL KILLS (apply in order; report how many die at each):
    - inactive author — ONLY if the data shows it (latest reel >6 months old); when the items carry no
      date signal, SKIP this rule rather than guess ;
@@ -187,36 +182,53 @@ PHASE C — CLASSIFY each survivor account:
    (everything else; "geo unclear" buckets as GLOBAL).
 PHASE D — name the accounts to deep-scrape (every EXACT + ADJACENT survivor).
 MINIMUM-POOL GATE (before ANY deep-scrape money is spent): if survivors < 8 accounts OR the pooled
-reels < 60, STOP before PART 2 — print the funnel and ask the operator for broader/better keywords (or
-an explicit "proceed LOW-CONFIDENCE" go-ahead). Spending the deep-scrape budget on a starved pool is
-REJECTED.
+reels < 60, STOP before PART 2 — print the funnel and broaden the mesh (more geo-fused hashtags, nearby
+cities in the PLACE leg, wider account queries), or ask the operator for an explicit "proceed LOW-CONFIDENCE"
+go-ahead. Spending the deep-scrape budget on a starved pool is REJECTED.
 FUNNEL LINE (mandatory): candidates_found → killed_by_rule (per-rule counts) → survivors →
 {EXACT n, ADJACENT n, MACRO n} → accounts_to_rank (usernames + ORIGIN (geo/language) + the single best
 reel URL seen per account).
 
-PART 2 — OUTLIER HARVEST (account-relative math; decode the outliers, not the loud numbers)
+PART 2 — OUTLIER HARVEST (account-relative math + FRESHNESS windows; decode RECENT outliers, not loud old numbers)
+FRESHNESS uses TWO SEPARATE windows — reusing one window corrupts the math:
+  · BASELINE window = 90 days — used ONLY to compute each account's median, so a single viral reel can't
+    inflate its own median and hide its own outlier ratio.
+  · SELECTION window = 30–45 days from {{CURRENT_DATE}} — only reels posted inside it may ENTER the decode
+    set. Older reels are DROPPED (kept only, clearly labelled "evergreen-format reference", if a bucket is
+    otherwise starved).
 1) For EACH account named in PHASE D, MCP — apify/instagram-reel-scraper:
-   { "username": ["<account>"], "resultsLimit": 40, "skipPinnedPosts": true }
-   We want ≥30 reels per account for a stable median. REPORT the actual n per account — some profiles
-   paginate short. Fetch full items with `omit`.
-2) For each account compute ACCOUNT_MEDIAN = median `videoPlayCount` over its scraped reels.
+   { "username": ["<account>"], "resultsLimit": 40, "skipPinnedPosts": true, "onlyPostsNewerThan": "90 days" }
+   We want ≥15 in-window reels for a stable median. REPORT the actual n per account. Accounts with <5–8
+   in-window reels are EXCLUDED from outlier math (unstable median) and flagged — never faked. Fetch full
+   items with `omit`.
+2) ACCOUNT_MEDIAN = median `videoPlayCount` over the account's 90-day-window reels.
 3) For every reel, OUTLIER_SCORE = videoPlayCount ÷ ACCOUNT_MEDIAN.
    (Fallback only if a median is unavailable: videoPlayCount ÷ follower count, label it, and list those
    reels in a SEPARATE table — never co-rank them with account-relative scores.)
 4) Thresholds: ≥5x = OUTLIER (decode-worthy); ≥20x = PRIORITY. Also flag CONSISTENCY WINNERS (accounts
    whose ACCOUNT_MEDIAN is itself high vs peers — their repeatable SYSTEM is the prize). If an account's
-   n < 20, label its scores LOW-CONFIDENCE and do NOT let it contribute a ≥20x PRIORITY reel without a
-   written caveat.
-5) SELECT the decode set: top 20–25 reels overall, composed of ≥15 EXACT, ≥5 ADJACENT (transplant),
+   in-window n < 15, label its scores LOW-CONFIDENCE and do NOT let it contribute a ≥20x PRIORITY reel
+   without a written caveat.
+5) SELECT the decode set: top 20–25 reels overall THAT FALL INSIDE THE SELECTION WINDOW, composed of ≥15 EXACT, ≥5 ADJACENT (transplant),
    ≤3 MACRO (hook-only). If a bucket can't be filled, print the SHORTFALL (e.g. "EXACT 9/15") and
    proceed under-filled — reclassifying or padding to hit a quota is REJECTED.
    MARKET MIX (second axis, same honesty rules): the set must include ≥5 reels from TARGET-MARKET or
-   CULTURE-MATCH accounts — pull them from the GEO leg and seeds if the global ranking alone doesn't
-   supply them, but each must STILL be a ≥5x outlier on its OWN account (a sub-outlier local reel is not
-   a substitute). If the pool genuinely can't supply 5, print "MARKET MIX SHORTFALL x/5" and proceed.
+   CULTURE-MATCH accounts — pull them from the PLACE/hashtag legs and seeds if the global ranking alone
+   doesn't supply them, but each must STILL be a ≥5x outlier on its OWN account (a sub-outlier local reel is
+   not a substitute). If the pool genuinely can't supply 5, print "MARKET MIX SHORTFALL x/5" and proceed.
    GLOBAL winners STAY in the set — hooks and formats transplant across geos (§2.4); the quota exists so
    pattern synthesis isn't blind to how the client's OWN market actually talks and proves. FORMAT-ONLY
    tagged reels (wrong language, kept for the format) may fill at most 8 of the 20–25 slots.
+6) AUDIO-TREND BOOSTER (optional, budget-gated — only if under the item cap): for the audio_id of the top
+   2–3 confirmed winners, MCP — kinaesthetic_millionaire/instagram-reels-audio-scraper to pull recent reels
+   on that sound; a sound whose last-7-days reel count clearly exceeds the prior 7–30 days is STILL trending
+   (jump-worthy NOW) vs "was trending". Tag such reels "TRENDING-AUDIO". This is enrichment — it never
+   blocks the run and does not count toward the freshness/market-mix guarantees.
+FRESHNESS RECEIPT (mandatory): every selected reel carries its exact timestamp + days_since_post; the ranked
+   table ends with the pool's date-range span (oldest→newest selected) and the run date {{CURRENT_DATE}}.
+   HONEST-DEGRADE: if the freshest real outlier in the niche is OLDER than the selection window, raise a
+   "LOW-FRESHNESS — newest outlier is <N> days old" flag and carry it to the report — never widen the window
+   silently or reuse a stale winner to hit a quota.
 
 COST GUARDRAIL: this step scrapes. Apify surfaces compute units, not live dollars, so meter in ITEMS
 (~350 items ≈ $1): before any run would exceed ~1,500 total items, PAUSE and ask the owner; report the
@@ -266,10 +278,17 @@ DECODE-ACTOR HEALTH (check FIRST — the decode actors are third-party and can b
   - VERBAL/transcription: default `apple_yang/instagram-transcripts-scraper` (proven working). If it ever
     errors, fall back to a rented `donjuan_mime/audio-video-to-text` (paid) or another working transcription
     actor — never proceed on a fabricated transcript.
-  - VISUAL/on-screen-text: `grizzlygriff/video-llm-analyzer` is the only Apify multimodal frame analyzer and
-    it is FLAKY (~68% success / often HTTPStatusError). Retry once; if it still fails, mark VISUAL + OVERLAY
-    "unavailable — visual actor down" and proceed on VERBAL + PACKAGING (the decode is still useful). The
-    old Higgsfield `video_analysis` fallback is NOT callable by that name in-session — treat it as absent.
+  - VISUAL/on-screen-text: the ROBUST path is SERVER-SIDE (like transcription) — a multimodal actor that
+    downloads + frame-analyses the reel and returns TEXT, so it works regardless of THIS session's network
+    policy. In-connector the only such actor is `grizzlygriff/video-llm-analyzer` and it is FLAKY (~68–70%
+    success). Retry once; if it still fails, mark VISUAL + OVERLAY "unavailable — visual actor down" and
+    proceed on VERBAL + PACKAGING (the decode is still useful). Do NOT rely on downloading the reel and
+    running local ffmpeg for frames: live-verified 2026-07 the default web sandbox BLOCKS egress to
+    Instagram/Apify AND ships only a stripped ffmpeg that can't decode mp4 — local frames only work in a
+    Claude Code environment whose network policy permits IG+Apify egress and has a full ffmpeg installed.
+    The old Higgsfield `video_analysis` fallback is NOT callable by that name in-session — treat it as absent.
+    (v2: build/adopt a reliable server-side visual actor, or a hosted backend calling Gemini 2.5 Flash
+    native-video — that is the permanent fix for this one weak layer.)
   - If the VERBAL engine is also down (so there is no working decode engine at all), STOP the decode and
     report exactly which actor needs fixing (rental/replacement) with its console link. Inventing
     VERBAL/VISUAL/OVERLAY from the caption/topic is FORBIDDEN — a "decode blocked — <actor> needs
