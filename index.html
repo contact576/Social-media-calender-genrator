@@ -842,11 +842,13 @@ GLOBAL RULES (token/credit thrift + safety — non-negotiable)
 - RESUME, DON'T RESTART: ON START, list the vault folder. If a prior run under 7 days old left
   s1/s2/s3 files AND the operator's message says RESUME, skip those gates' makers (their checkers still
   run against the existing files) and spend the budget only on the missing or flagged stages — e.g.
-  after a GEO-SKEW / MARKET MIX SHORTFALL stop, re-run ONLY the S2 GEO leg and merge into the existing
-  pool. Print the age of every reused file; never silently reuse stale data.
+  after a MARKET MIX SHORTFALL, re-run ONLY the S2 PLACE + geo-fused-hashtag legs and merge into the
+  existing pool. Print the age of every reused file; never silently reuse stale data.
 - BUDGET GOVERNOR (autonomous — never pause for a human): the hard, directly-observable cap is ITEMS /
-  ACCOUNTS, not dollars (Apify surfaces compute units, not live $) — deep-scrape ≤
-  ceil({{REELS_TO_DECODE}} ÷ 2) accounts (an account usually yields 1–3 decode-worthy reels), and the
+  ACCOUNTS, not dollars (Apify surfaces compute units, not live $) — the ITEM CAP counts EVERY scraped item
+  across the whole run: the S2 discovery mesh (hashtag + place + account + snowball legs) AND the PART-2
+  deep-scrape AND the S3 decode. Deep-scrape ≤ ceil({{REELS_TO_DECODE}} ÷ 2) accounts (an account usually
+  yields 1–3 decode-worthy reels), and the
   ITEM CAP = min(1,500, {{RUN_BUDGET_USD}} × 350) total items (~350 items ≈ $1), resultsLimit at the
   ≥20-median floor. At ~80% of the item cap enter THRIFT MODE: stop adding accounts and cut the VERBAL
   decode of borderline (<5x) reels FIRST — the visual/overlay pass on the top-10 outliers is PROTECTED
@@ -861,6 +863,19 @@ GLOBAL RULES (token/credit thrift + safety — non-negotiable)
   A HARD-BLOCKED script STAYS in s7-scripts.md stamped "BLOCKED (score X / bar Y)" — Gate-5 coverage
   counts it as present-but-blocked, the client report must show the stamp, and S6 skips it. Coverage
   arithmetic never hides a block, and a block never breaks coverage.
+- COMPLETION CONTRACT — DEGRADE-AND-PROCEED vs HARD-STOP (this is what lets a run finish "100% in one
+  go"): distinguish two failure classes so the run always reaches a complete, honestly-labelled
+  deliverable instead of stalling on a known limitation.
+  HARD-STOP (rare — the output would be fabricated or structurally invalid): the VERBAL transcription
+  engine is down for the whole set (no real decode engine at all) · s3-outliers / s5-patterns missing at a
+  gate that loads them · COVERAGE X<N at Gate 4 · a fabrication/spot-check FAIL · orphan placeholders.
+  These stop the run with a flagged partial vault.
+  DEGRADE-AND-PROCEED (expected, NOT a stop — carry a visible flag to the report and keep going): VISUAL
+  actor flaky/unavailable after one retry (decode on VERBAL + PACKAGING, flag "visual unavailable / hooks
+  speculative") · MARKET MIX or GEO shortfall (thin local market) · LOW-FRESHNESS (newest outlier older
+  than the selection window) · no PROOF_ASSETS on file (CONVERT slots marked "needs proof") · a niche too
+  thin to fill a bucket (print the SHORTFALL). A run that ends with honest flags on these is a SUCCESS,
+  not a failure. Every degrade flag raised upstream MUST appear in the FINAL REPORT and the client report.
 
 THE PIPELINE — five gates, each MAKER → blind CHECKER (the checker sees the artifact + the spec, NOT the
 maker's reasoning). The MAKERS are the S1–S5 prompt templates whose fully-rendered text is APPENDED BELOW
@@ -873,15 +888,20 @@ GATE 1 — Baseline (maker S1, Sonnet). Checker (Haiku): MODE line present; ESTA
   median with n + missing/zero policy + LOW-CONFIDENCE stamp iff n<30; NEW/THIN → baseline "N/A" (no
   invented number) + a RECOMMENDED voice; HANDOFF complete; s1-baseline.md saved.
 GATE 2 — Discover & Rank (maker S2, Sonnet) — SAME SESSION as Gate 3 (IG video URLs expire). Checker
-  (Haiku, mostly arithmetic): RUN RECEIPT one row per query; FUNNEL LINE reconciles; every kill names
-  accounts; every ranked reel OUTLIER = plays ÷ that account's own median with n; SHORTFALLs flagged not
-  padded; origins recorded; GEO leg ran + ORIGIN MIX line present (MARKET MIX ≥5 met or SHORTFALL
+  (Haiku, mostly arithmetic): RUN RECEIPT covers the mesh (legs A HASHTAG + C ACCOUNTS ran; B PLACE ran or
+  an honest "SKIPPED — non-geo client"); FUNNEL LINE reconciles; every kill names accounts; every ranked
+  reel OUTLIER = plays ÷ that account's own 90-day median with n; FRESHNESS windows applied (median over
+  90d, selected reels inside the 30–45d selection window, freshness receipt + pool date-range present);
+  SHORTFALLs flagged not padded; origins recorded; ORIGIN MIX line present (MARKET MIX ≥5 met or SHORTFALL
   printed — never padded); s2-discovery.md + s3-outliers.md saved (with per-account datasetIds). Cap
   deep-scrape to ceil({{REELS_TO_DECODE}} ÷ 2) accounts; enforce the budget governor. SPOT-CHECK: fetch
   ≤5 items from 3 recorded datasetIds (read-only, no new scrape) and confirm the plays match the ranked
   table — mismatch = FAIL (fabricated numbers).
-GATE 3 — Decode & Synthesize (maker S3, Sonnet). Checker (Haiku): VERBAL states detected-language + engine;
-  VISUAL on ≥10 top outliers (or a loud "INVALIDATES scripts" notice); OVERLAY a SEPARATE channel (flag if
+GATE 3 — Decode & Synthesize (maker S3, Sonnet). Checker (Haiku): VERBAL states detected-language + engine
+  on ALL selected reels (VERBAL down for the whole set = HARD-STOP); VISUAL attempted on the top 10 outliers
+  — if the visual actor was flaky/unavailable after one retry, an honest "VISUAL unavailable — hooks
+  speculative" flag is an ACCEPTED DEGRADE-AND-PROCEED, NOT a gate failure (do not hard-block the run for it;
+  just require the flag to be carried forward); OVERLAY a SEPARATE channel (flag if
   it just copies the spoken hook); cards tagged + ORIGIN + IDs; confidence + honest GEO/LANGUAGE skew stamp;
   THE GAP cites ≥3 card IDs; both files saved. PLUS an ANTI-FABRICATION check (Opus — the only Opus
   checker): does any VERBAL read as written-from-caption rather than a real transcript? A non-English reel
