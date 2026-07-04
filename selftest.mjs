@@ -99,6 +99,16 @@ ok('ORCHESTRATOR budget governor is item-first, not live $', /the hard, directly
 ok('ORCHESTRATOR bundles the maker templates (self-contained run)', /APPENDED BELOW/.test(ORCH));
 ok('ORCHESTRATOR grader caps the unguarded axes (retention/share)', /device asserted without a quoted script line/.test(ORCH) && /not\s*\n?\s*tied to a named §2\.3 trigger/.test(ORCH.replace(/\n\s*/g,' ')));
 ok('S6 faithfulness has a SOURCE→FRAME coverage check', /SOURCE→FRAME coverage/.test(S6));
+ok('S6 faithfulness binds image-prompt text + has a blind check', /IMAGE-GEN PROMPT bakes into the frame/.test(S6) && /BLIND CHECK/.test(S6));
+// completion contract + QC-gate hardening (auditor findings)
+ok('ORCHESTRATOR has the completion contract (degrade-vs-stop)', /COMPLETION CONTRACT/.test(ORCH) && /DEGRADE-AND-PROCEED/.test(ORCH) && /HARD-STOP/.test(ORCH));
+ok('ORCHESTRATOR never waits for a human (autonomous)', /NEVER WAIT FOR A HUMAN/.test(ORCH));
+ok('ORCHESTRATOR grader-call ceiling counts batched grading', /ceil\(\{\{SCRIPTS_TO_WRITE\}\} ÷ 5\)/.test(ORCH));
+ok('Gate-2 spot-check verifies the outlier ratio, not just plays', /RECOMPUTE the median/.test(ORCH) && /OUTLIER_SCORE = plays ÷ recomputed median/.test(ORCH));
+ok('Gate-3 spot-checks the decode layer (not just plays)', /DECODE SPOT-CHECK/.test(ORCH) && /diffs them VERBATIM/.test(ORCH));
+ok('Grader verifies each cited C# mechanic against the cards', /MUST LOAD s4-decode/.test(ORCH) && /decoded mechanic must match/.test(ORCH));
+ok('Gate-5 flag+number carry-through is mechanical', /FLAG \+ NUMBER DIFF/.test(ORCH) && /LOW-FRESHNESS/.test(ORCH));
+ok('S4 records proof-led/format-led + forces a CONVERT slot', /proof-led\/format-led/.test(s4) && /0-CONVERT calendar is REJECTED/.test(s4));
 const s5nh=api.generatePrompt('S5', valsNH, RAW);
 ok('S5 learning-loop guards no-handle', /Learning loop not\s+yet active/.test(s5nh) && !/"resultsLimit": 30/.test(s5nh) && api.preflight(s5nh).length===0);
 ok('no-handle client still passes validation', Object.keys(api.validate(Object.assign({},api.TEST_CLIENT,{CLIENT_HANDLE:''}))).length===0);

@@ -509,11 +509,14 @@ FRESHNESS uses TWO SEPARATE windows — reusing one window corrupts the math:
    GLOBAL winners STAY in the set — hooks and formats transplant across geos (§2.4); the quota exists so
    pattern synthesis isn't blind to how the client's OWN market actually talks and proves. FORMAT-ONLY
    tagged reels (wrong language, kept for the format) may fill at most 8 of the 20–25 slots.
-6) AUDIO-TREND BOOSTER (optional, budget-gated — only if under the item cap): for the audio_id of the top
-   2–3 confirmed winners, MCP — kinaesthetic_millionaire/instagram-reels-audio-scraper to pull recent reels
-   on that sound; a sound whose last-7-days reel count clearly exceeds the prior 7–30 days is STILL trending
-   (jump-worthy NOW) vs "was trending". Tag such reels "TRENDING-AUDIO". This is enrichment — it never
-   blocks the run and does not count toward the freshness/market-mix guarantees.
+6) AUDIO-TREND BOOSTER (optional, budget-gated — only if under the item cap): for the top 2–3 confirmed
+   winners, take each reel's `musicInfo.audio_id` and build its audio-page URL, then MCP —
+   kinaesthetic_millionaire/instagram-reels-audio-scraper:
+   { "audioUrls": ["https://www.instagram.com/reels/audio/<audio_id>/"], "maxResults": 20 }
+   (the actor takes an audioUrls ARRAY of audio-page URLs, NOT a bare audio_id). A sound whose last-7-days
+   reel count clearly exceeds the prior 7–30 days is STILL trending (jump-worthy NOW) vs "was trending".
+   Tag such reels "TRENDING-AUDIO". This is enrichment — it never blocks the run and does not count toward
+   the freshness/market-mix guarantees.
 FRESHNESS RECEIPT (mandatory): every selected reel carries its exact timestamp + days_since_post; the ranked
    table ends with the pool's date-range span (oldest→newest selected) and the run date {{CURRENT_DATE}}.
    HONEST-DEGRADE: if the freshest real outlier in the niche is OLDER than the selection window, raise a
@@ -655,7 +658,9 @@ PRODUCE:
 OUTPUT: the decoded cards (compact), then the seven synthesis sections (terse).
 VAULT SAVE: save TWO files —
   "{{VAULT_FOLDER}}/s4-decode.md" — full cards + HANDOFF SUMMARY (≤30 lines: card IDs with one-line hook
-    + format + outlier score + ORIGIN each; mark any UNAVAILABLE/low-confidence cards);
+    + format + outlier score + ORIGIN each; mark any UNAVAILABLE/low-confidence cards). Each card RECORDS
+    the decode-actor runId + datasetId that produced its VERBAL (and VISUAL if run) so Gate-3 can re-fetch
+    and diff them — a card with no recorded actor run cannot be spot-checked and is treated as UNVERIFIED;
   "{{VAULT_FOLDER}}/s5-patterns.md" — full synthesis + HANDOFF SUMMARY (≤30 lines: top 5 verbal + 5
     visual + 5 overlay hooks, the 3 transplants, THE GAP in one sentence, and the GEO/LANGUAGE SKEW
     verdict + confidence stamp).
@@ -695,15 +700,21 @@ RULES
   40% NURTURE (niche value: how-tos, mistakes, costs explained — saves & follows from the ICP) ·
   20% CONVERT (proof, transformations, testimonials, offers). Build CONVERT slots from the PROOF ON
   FILE / operator notes; if none was supplied, mark each CONVERT slot "needs a proof asset from the
-  client" rather than inventing a result.
+  client" rather than inventing a result. ALWAYS include ≥1 CONVERT slot (it is the revenue bucket) —
+  a 0-CONVERT calendar is REJECTED even when no proof is on file (stamp it "needs proof").
 - Honor the cadence in {{POSTING_CAPACITY}}, up to a CAP of 7 reels/week; a week with more slots than
-  the stated capacity (or >7) is REJECTED. If capacity exceeds 3/week, add a one-line note that
-  consistency beats volume and confirm the client can genuinely produce at that rate.
+  the stated capacity (or >7) is REJECTED. If the requested script count needs more slots than
+  capacity×(calendar weeks) allows, EXTEND the calendar to more weeks rather than breach the weekly
+  cadence. If capacity exceeds 3/week, add a one-line note that consistency beats volume.
 - Pull hooks/formats from the s5 hook bank + transplant map; tag which card/transplant each derives from.
-  Every source card ID you cite MUST exist in the loaded s4/s5 set — cross-check, don't invent.
-CALENDAR TABLE — one row per slot: date | week | REACH/NURTURE/CONVERT | pillar | format (from bank) |
-hook concept | topic | audio rec | CTA | production-effort tag (phone-only / designer / on-site shoot —
-from {{PRODUCTION_MODES}}) | source (card ID or transplant). Print the LITERAL integer counts +
+  Every source card ID you cite MUST exist in the loaded s4/s5 set AND the mechanic you borrow must match
+  that card's actual decode — cross-check, don't invent or misattribute.
+- LABEL each slot proof-led or format-led: proof-led = it carries an owned result (from PROOF ON FILE /
+  notes / baseline); format-led = no owned proof, it wins on format alone. A REACH/NURTURE slot whose topic
+  matches an available PROOF_ASSET MUST be proof-led — do not write it proof-less to duck to an easier bar.
+CALENDAR TABLE — one row per slot: date | week | REACH/NURTURE/CONVERT | proof-led/format-led | pillar |
+format (from bank) | hook concept | topic | audio rec | CTA | production-effort tag (phone-only / designer /
+on-site shoot — from {{PRODUCTION_MODES}}) | source (card ID or transplant). Print the LITERAL integer counts +
 percentages per bucket and per week. With a 2–3 reel/week cadence an exact 40/40/20 is usually
 impossible — show the NEAREST achievable split and FLAG the deviation; never claim "40/40/20" if the
 math doesn't.
@@ -742,7 +753,8 @@ Directly UNDER each table, a FOOTER of labelled lines:
 QUALITY GATES — run all of these internally on each script and report them COMPACTLY (one line per
 script; a bare "pass" is NOT accepted — keep the evidence):
 - SWIPE: would EACH of the 3 channels independently stop the scroll? (visual / verbal / overlay)
-- OVERLAY ≠ VERBAL: the overlay text must differ from the spoken hook (if identical, rewrite).
+- OVERLAY ≠ VERBAL: the overlay must be a genuinely SECOND message, not the spoken hook restated — if it
+  is identical OR a near-duplicate reword (same meaning, a word or two swapped), rewrite it.
 - ACCOUNT-SWAP: name the specific owned proof point used (PROOF ON FILE / operator notes /
   s1-baseline). No proof on file → flag the script "needs client proof" — never invent one.
 - SHARE TRIGGER: the one §2.3 trigger (identity / usefulness / awe / humor / controversy / local pride)
@@ -775,7 +787,8 @@ output — include all of these sections:
 - Cover: {{CLIENT_NAME}} · {{NICHE}} · prepared {{CURRENT_DATE}}.
 - HOW WE RESEARCHED IT: the funnel counts (from s2 — candidates → kills → survivors), how many accounts
   were deep-scraped and how many reels were fully decoded (from s3/s4), and the THREE-LAYER DECODE METHOD
-  naming the tool used per layer (visual / on-screen-text / audio, from s4). Make the rigor visible.
+  naming the tool used per layer (VERBAL / VISUAL / OVERLAY, matching the S3 layer names, from s4). Make the
+  rigor visible.
 - ACCOUNTS WE DECODED: a table of each decoded account WITH ITS ORIGIN (geo + language, from s2/s4) and
   one line on why it was relevant / how its format transplants. If s5 stamped a GEO/LANGUAGE SKEW (e.g.
   every winner from one region), state it plainly here — never hide a thin or skewed sample.
@@ -785,8 +798,9 @@ output — include all of these sections:
   Hook/CTA/Why-viral footer) — one script per calendar slot, matching the calendar 1:1. Do NOT reduce to
   "a few flagship examples". Print a COVERAGE line: "scripts shown X / calendar slots N".
 - Keep claims evidence-bound; for each headline number cite which vault file it came from. A count that
-  was flagged LOW-CONFIDENCE / UNAVAILABLE / PARTIAL / GEO-SKEWED upstream must NOT appear as a clean
-  stat here — carry the flag through to the client report.
+  was flagged LOW-CONFIDENCE / UNAVAILABLE / PARTIAL / GEO-SKEWED / LOW-FRESHNESS / MARKET-MIX SHORTFALL /
+  NEEDS-PROOF / BUDGET-CAPPED upstream must NOT appear as a clean stat here — carry the flag through to the
+  client report.
 
 PART B — LEARNING LOOP (monthly re-run):
 The learning loop compares the client's OWN posts against their S1 baseline each month. It only runs
@@ -795,7 +809,7 @@ yet active — client has no account/posts" and skip the rest of Part B.
 [[IF CLIENT_HANDLE]]- First check the S1 baseline's age + n. If older than ~60 days OR stamped
   LOW-CONFIDENCE (n<30), RECOMPUTE the baseline from a fresh client scrape before any verdict.
 - MCP — apify/instagram-reel-scraper on the client's OWN last-30-days:
-  { "username": ["{{CLIENT_HANDLE}}"], "resultsLimit": 30, "skipPinnedPosts": true }
+  { "username": ["{{CLIENT_HANDLE}}"], "resultsLimit": 30, "skipPinnedPosts": true, "onlyPostsNewerThan": "30 days" }
   If the actor returns an "approve-permissions" error, send the link to the owner to approve once, re-run.
 - Outlier-score the client's own posts vs the S1 BASELINE_MEDIAN_PLAYS. If the baseline is "N/A —
   new/thin account", treat this as MONTH 1: just record each post + its plays to SEED next month's
@@ -834,8 +848,10 @@ GLOBAL RULES (token/credit thrift + safety — non-negotiable)
 - BOUNDED LOOPS: at most {{MAX_REGEN_LOOPS}} repair rounds per gate and ≤3 maker calls per gate total; keep
   the best attempt (never ship a regen that scored lower). Track a RUNNING TALLY of every sub-agent call
   (makers + checkers + grader rounds + deliverables) and print it in the FINAL REPORT; if it would exceed
-  (5 gates × 3 makers) + (5 checkers) + (({{MAX_REGEN_LOOPS}} + 1) batched grader calls) +
-  deliverables, STOP and report.
+  (5 gates × 3 makers) + (5 checkers) + (ceil({{SCRIPTS_TO_WRITE}} ÷ 5) × ({{MAX_REGEN_LOOPS}} + 1) grader
+  calls — the grader runs in ≤5-script batches, so N>5 scripts means ceil(N/5) calls per round) +
+  deliverables, STOP and report. The grader loop's S4-maker re-invocations count against the same
+  ≤3-maker-calls-per-gate budget for Gate 4.
 - REUSE, NEVER RE-SCRAPE: checkers and feedback work from the Drive vault, not new Apify calls.
   A Gate-2 re-scrape is capped at 1 and forces a bounded re-run of Gates 3–4 under the SAME budget; if that
   would breach the item cap below, refuse it and STOP with a flagged report.
@@ -876,6 +892,10 @@ GLOBAL RULES (token/credit thrift + safety — non-negotiable)
   than the selection window) · no PROOF_ASSETS on file (CONVERT slots marked "needs proof") · a niche too
   thin to fill a bucket (print the SHORTFALL). A run that ends with honest flags on these is a SUCCESS,
   not a failure. Every degrade flag raised upstream MUST appear in the FINAL REPORT and the client report.
+- AUTONOMOUS — NEVER WAIT FOR A HUMAN: any maker instruction to "ask the operator", "PAUSE and ask", or
+  seek a "proceed" go-ahead (the S2 MINIMUM-POOL gate, the S2/S4 cost guardrails) AUTO-RESOLVES in this
+  mode to "proceed LOW-CONFIDENCE", stamped in the FINAL REPORT — the run never blocks on human input; it
+  only stops on a HARD-STOP condition above.
 
 THE PIPELINE — five gates, each MAKER → blind CHECKER (the checker sees the artifact + the spec, NOT the
 maker's reasoning). The MAKERS are the S1–S5 prompt templates whose fully-rendered text is APPENDED BELOW
@@ -891,50 +911,70 @@ GATE 2 — Discover & Rank (maker S2, Sonnet) — SAME SESSION as Gate 3 (IG vid
   (Haiku, mostly arithmetic): RUN RECEIPT covers the mesh (legs A HASHTAG + C ACCOUNTS ran; B PLACE ran or
   an honest "SKIPPED — non-geo client"); FUNNEL LINE reconciles; every kill names accounts; every ranked
   reel OUTLIER = plays ÷ that account's own 90-day median with n; FRESHNESS windows applied (median over
-  90d, selected reels inside the 30–45d selection window, freshness receipt + pool date-range present);
-  SHORTFALLs flagged not padded; origins recorded; ORIGIN MIX line present (MARKET MIX ≥5 met or SHORTFALL
-  printed — never padded); s2-discovery.md + s3-outliers.md saved (with per-account datasetIds). Cap
-  deep-scrape to ceil({{REELS_TO_DECODE}} ÷ 2) accounts; enforce the budget governor. SPOT-CHECK: fetch
-  ≤5 items from 3 recorded datasetIds (read-only, no new scrape) and confirm the plays match the ranked
-  table — mismatch = FAIL (fabricated numbers).
+  90d, selected reels inside the 30–45d selection window — out-of-window reels are allowed ONLY if tagged
+  "evergreen-format reference" or the run carries a LOW-FRESHNESS flag; freshness receipt + pool date-range
+  present); SHORTFALLs flagged not padded; origins recorded; ORIGIN MIX line present (MARKET MIX ≥5 met or
+  SHORTFALL printed — never padded); s2-discovery.md + s3-outliers.md saved (with per-account datasetIds). Cap
+  deep-scrape to ceil({{REELS_TO_DECODE}} ÷ 2) accounts; enforce the budget governor. SPOT-CHECK (the outlier
+  SCORE is the single most important number — verify the WHOLE ratio, not just plays): for 3 random ranked
+  accounts, fetch their recorded datasetId items (read-only, no new scrape), RECOMPUTE the median, and assert
+  both the reel's plays AND OUTLIER_SCORE = plays ÷ recomputed median (±10%) match the table — any mismatch =
+  FAIL (fabricated numbers or a doctored divisor).
 GATE 3 — Decode & Synthesize (maker S3, Sonnet). Checker (Haiku): VERBAL states detected-language + engine
   on ALL selected reels (VERBAL down for the whole set = HARD-STOP); VISUAL attempted on the top 10 outliers
   — if the visual actor was flaky/unavailable after one retry, an honest "VISUAL unavailable — hooks
   speculative" flag is an ACCEPTED DEGRADE-AND-PROCEED, NOT a gate failure (do not hard-block the run for it;
   just require the flag to be carried forward); OVERLAY a SEPARATE channel (flag if
   it just copies the spoken hook); cards tagged + ORIGIN + IDs; confidence + honest GEO/LANGUAGE skew stamp;
-  THE GAP cites ≥3 card IDs; both files saved. PLUS an ANTI-FABRICATION check (Opus — the only Opus
-  checker): does any VERBAL read as written-from-caption rather than a real transcript? A non-English reel
+  THE GAP cites ≥3 card IDs; both files saved. DECODE SPOT-CHECK (mirror the Gate-2 pattern on the decode
+  layer — the most fabrication-prone one): s4-decode must record each reel's decode-actor runId/datasetId;
+  the checker re-fetches ≤3 transcript/visual dataset items and diffs them VERBATIM against the card — a card
+  whose VERBAL/OVERLAY doesn't match the actor output = FAIL. PLUS an ANTI-FABRICATION check (Opus — the only
+  Opus checker): does any VERBAL read as written-from-caption rather than a real transcript? A non-English reel
   that "auto-detected English" = FAIL. Is THE GAP real, the skew verdict honest? A wrong PASS here poisons
   every downstream script, which is why this single check earns Opus.
 GATE 4 — Plan & Script (maker S4, OPUS — the one creative stage) → then the GRADER loop (below).
   Instruct the maker: cap the calendar at {{SCRIPTS_TO_WRITE}} slots (highest-value first) so
   scripts == slots == {{SCRIPTS_TO_WRITE}} and every script gets its S6 deliverable. Checker
-  (Haiku): COVERAGE X==N (X<N = FAIL); cadence matches {{POSTING_CAPACITY}} and ≤7/wk; 40/40/20
-  reported with integer counts; every cited card ID exists; each script's first row carries all 3 hook
-  channels with OVERLAY≠VERBAL; scripts are written in the client's language (wrong-language output =
-  FAIL); CONVERT slots cite real proof or are flagged "needs proof" (never invented); NO-GO clean;
-  s6-calendar.md + s7-scripts.md saved. RECORD each script's bucket (REACH/NURTURE/CONVERT) and
-  proof-led vs format-led status in s6-calendar.md — the grader MUST use these recorded labels; a label
-  that changes between grading rounds = FAIL (relabeling to reach a lower bar is gaming).
+  (Haiku): COVERAGE X==N (X<N = FAIL); cadence matches {{POSTING_CAPACITY}} and ≤7/wk; slots ≤
+  {{POSTING_CAPACITY}}×(calendar weeks) — if {{SCRIPTS_TO_WRITE}} exceeds that, the calendar SPANS more weeks
+  rather than breaching cadence; 40/40/20 reported with integer counts AND ≥1 CONVERT slot present (a
+  0-CONVERT calendar = FAIL — CONVERT is the revenue bucket; stamp it "needs proof" when none on file, never
+  drop it); every cited card ID EXISTS in s4-decode AND its cited mechanic MATCHES that card (a real C#
+  with a misattributed mechanic = FAIL); each script's first row carries all 3 hook channels with
+  OVERLAY≠VERBAL; each script has the FOOTER (HOOK / CTA / WHY-VIRAL), beat timecodes that sum to the target
+  length, and a caption + hashtags (a one-line "hook only" script = FAIL); scripts are written in the
+  client's language (wrong-language output = FAIL); CONVERT slots cite real proof or are flagged "needs
+  proof" (never invented); NO-GO clean; s6-calendar.md + s7-scripts.md saved. RECORD each script's bucket
+  (REACH/NURTURE/CONVERT) and proof-led vs format-led status in s6-calendar.md — a REACH/NURTURE slot whose
+  topic matches an available PROOF_ASSET MUST be recorded proof-led (MIN bar); "format-led" is valid ONLY
+  when no relevant proof exists (writing a slot proof-less to duck to the MIN−3 bar = FAIL). The grader MUST
+  use these recorded labels; a label that changes between grading rounds = FAIL (relabeling to reach a lower
+  bar is gaming).
 GATE 5 — Showcase + Learning Loop (maker S5, Sonnet). Checker (Haiku): 7-file LOAD RECEIPT complete with
   s2-discovery + s3-outliers PRESENT (STOP if absent); report COVERAGE shows scripts==slots (a
-  BLOCKED-stamped script counts as covered but must display its stamp); every headline
-  number cites its vault file; every upstream LOW-CONFIDENCE/UNAVAILABLE/PARTIAL/GEO-SKEWED flag carried
-  through; s8-report.md + s8b-learning-loop.md saved.
+  BLOCKED-stamped script counts as covered but must display its stamp). FLAG + NUMBER DIFF (mechanical, not
+  eyeball — the absence of a flag is invisible otherwise): the checker LOADS s3-outliers + s4-decode +
+  s5-patterns + s6-calendar, ENUMERATES every quality/degrade flag (LOW-CONFIDENCE / UNAVAILABLE / PARTIAL /
+  GEO-SKEWED / LOW-FRESHNESS / MARKET-MIX SHORTFALL / NEEDS-PROOF / BUDGET-CAPPED) and every headline number,
+  and asserts each flag appears in the report and each cited number matches the file it cites — a laundered
+  flag (dropped) or a number with no matching source = FAIL; s8-report.md + s8b-learning-loop.md saved.
 
 THE REPAIR LADDER (cheapest fix first; bounded): on a checker FAIL, classify each defect and apply the
 narrowest repair — AUGMENT (redo ONLY the missing pieces, reuse all prior work) → REVAMP (fix the specific
 wrong items, no re-scrape) → REGENERATE (core output invalid; reuse cached datasets/live URLs). Caps as in
 GLOBAL RULES. On exhausting the cap, HARD-BLOCK (do not advance) and report.
 
-THE VIRALITY GRADER (Gate 4, Sonnet — ONE grader; scores TEXT only; Higgsfield virality_predictor is NOT
-used, it needs a finished video). Grade every script 0–100. Score each axis 0–10 with a quoted
-justification that cites the SPECIFIC script line AND the decoded card's mechanic; a bare assertion with no
-quoted line caps that axis at 3. Axes and weights (they sum to 100):
+THE VIRALITY GRADER (Gate 4, Sonnet — ONE grader; Higgsfield virality_predictor is NOT used, it needs a
+finished video). The grader scores the script TEXT but MUST LOAD s4-decode + s5-patterns and VERIFY every
+cited C#: the card must exist AND its actual decoded mechanic must match what the script claims to borrow —
+a script self-asserting a C# it doesn't match, or citing a mechanic that card doesn't have, earns NO credit
+on the axis that leaned on it (this is what stops the "just name any plausible C#" game). Grade every script
+0–100. Score each axis 0–10 with a quoted justification that cites the SPECIFIC script line AND the verified
+card's mechanic; a bare assertion with no quoted line caps that axis at 3. Axes and weights (they sum to 100):
   Hook strength (verbal) 18 · Visual hook 14 (must name the decoded C# whose first-frame mechanic it
-  borrows → else cap 5; an invented visual hook is not evidence) · Overlay hook 12 (identical to the
-  spoken hook → cap 3) ·
+  borrows → else cap 5; an invented visual hook is not evidence) · Overlay hook 12 (identical to OR a
+  near-paraphrase of the spoken hook → cap 3) ·
   Retention/return hook 14 (device asserted without a quoted script line → cap 4) · Share trigger 12 (not
   tied to a named §2.3 trigger — identity / usefulness / awe / humor / controversy / local pride — with
   a stated reason a human forwards it → cap 4) · Owned-proof / account-
@@ -954,8 +994,9 @@ quoted line caps that axis at 3. Axes and weights (they sum to 100):
   on file (proof and format reels legitimately trade owned-proof/share-trigger for their own strength — do
   NOT water them down to chase points). NO-PROOF CLIENT RULE: if NO proof exists anywhere on file (no
   PROOF ON FILE, none in notes or baseline), a CONVERT script honestly built as "needs client proof —
-  placeholder marked" is graded with the owned-proof axis EXCLUDED (re-weight the remaining axes to sum
-  100) and delivered carrying a NEEDS-PROOF stamp — a missing client asset is not a script defect and
+  placeholder marked" is graded with the owned-proof axis EXCLUDED (re-weight the remaining 88 points
+  PROPORTIONALLY — each surviving axis_weight × 100/88 — so the axes still sum to 100; state the reweight)
+  and delivered carrying a NEEDS-PROOF stamp — a missing client asset is not a script defect and
   must not hard-block the whole CONVERT bucket. Grade in batches of ≤5 scripts per call (a 10-script
   mega-batch invites truncation and late-batch laziness); only sub-bar scripts re-enter,
   sent back to the S4 maker with ONLY their failing axes + fix notes + the C# to lean on harder. Best-of-N;
@@ -1013,12 +1054,18 @@ FOR EACH approved script, produce ONLY the requested sections:
   generation prompts as fenced code blocks, kept separate so a client storyboard isn't polluted with jargon.
 
 FAITHFULNESS GATE (before emitting) — two directions, like the Beautifier's no-silent-drop rule:
-  (1) FRAME→SOURCE: every frame's VO + OVERLAY is a verbatim line from a source script row.
+  (1) FRAME→SOURCE: every frame's VO + OVERLAY is a verbatim line from a source script row. ALSO: any text
+      the IMAGE-GEN PROMPT bakes into the frame must be a verbatim script overlay, and any RESULT/claim the
+      prompt depicts (a "−12 lbs", a "before/after", a number on screen) must trace to a script line — a
+      frame may NOT invent an on-screen result, caption, or claim the script doesn't contain (this is the
+      most dangerous fabrication in a client deliverable).
   (2) SOURCE→FRAME coverage: enumerate EVERY VO line and EVERY overlay in the source script (plus the CTA /
       end-card) and assert each appears verbatim in ≥1 frame — nothing vanishes silently. If a script has
       >10 beats, allow >10 frames OR add a "merged beats X+Y" note so nothing is dropped to hit 8–10.
   Frame count 8–10 (or a justified >10). Fix any failing frame once; if it STILL fails, emit with that
   frame stamped "FAITHFULNESS FAIL — check against script row <n>" (never emit a silent mismatch).
+  BLIND CHECK: run this faithfulness gate as a SEPARATE blind sub-agent (fresh eyes — given the frames +
+  the source script, NOT the maker's reasoning), consistent with the pipeline's maker→checker rule.
 
 VAULT SAVE: save the deliverables to "{{VAULT_FOLDER}}/s9-deliverables.md" (storyboard + designer-doc +
 optional prompts, per reel). Echo the path + link; confirm no duplicate folder.
