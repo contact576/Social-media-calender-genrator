@@ -56,7 +56,10 @@ const s1=api.generatePrompt('S1', vals, RAW), s2=api.generatePrompt('S2', vals, 
 
 // S2 — Discover & Rank: discovery legs + origin capture + outlier ranking + cost gate
 ok('S2 strips empty COMPETITOR_HANDLES leg', !/Force-include these competitor handles/.test(s2));
-ok('S2 keeps mandatory hashtag leg on the reliable actor', /Leg 2 — HASHTAGS \(the RELIABLE backbone — always run/.test(s2) && /apify\/instagram-hashtag-scraper/.test(s2));
+ok('S2 hashtag backbone on the reliable actor', /Leg A — HASHTAG \(reliable backbone/.test(s2) && /apify\/instagram-hashtag-scraper/.test(s2));
+ok('S2 runs the cookieless discovery mesh (place + accounts)', /Leg B — PLACE/.test(s2) && /Leg C — ACCOUNTS/.test(s2) && /searchType": "place"/.test(s2) && /searchType": "user"/.test(s2));
+ok('S2 keyword search is demoted to a bonus, not the backbone', /keyword reel-search is DEAD/.test(s2) && /Leg F — KEYWORD \(BONUS/.test(s2));
+ok('S2 splits freshness windows (90d baseline / 30-45d selection)', /BASELINE window = 90 days/.test(s2) && /SELECTION window = 30–45 days/.test(s2) && /onlyPostsNewerThan": "90 days"/.test(s2));
 ok('S2 records account origin (geo/language)', /RECORD its ORIGIN/.test(s2));
 ok('S2 ranks with an origin column', /origin \(geo\/lang\)/.test(s2));
 ok('S2 carries the scrape cost guardrail', /COST GUARDRAIL/.test(s2));
